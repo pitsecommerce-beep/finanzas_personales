@@ -74,6 +74,18 @@ export interface Account {
   created_at: string
 }
 
+export type GenderType = 'male' | 'female' | 'other' | 'prefer_not_to_say'
+
+export interface Profile {
+  id: string
+  user_id: string
+  full_name: string
+  age: number | null
+  gender: GenderType | null
+  created_at: string
+  updated_at: string
+}
+
 export interface AIConfig {
   id: string
   user_id: string

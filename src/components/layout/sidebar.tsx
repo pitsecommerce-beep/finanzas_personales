@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useProfileContext } from '@/lib/context/profile-context'
 
 const links = [
   { href: '/inicio', label: 'Inicio', icon: Home },
@@ -34,6 +35,7 @@ const links = [
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { firstName } = useProfileContext()
 
   async function handleLogout() {
     const supabase = createClient()
@@ -45,7 +47,11 @@ export function Sidebar() {
     <aside className="hidden lg:flex flex-col w-64 bg-primary text-white min-h-screen">
       <div className="p-6">
         <h1 className="text-xl font-bold text-accent">FinanzApp</h1>
-        <p className="text-xs text-gray-400 mt-1">Control financiero inteligente</p>
+        {firstName ? (
+          <p className="text-xs text-gray-400 mt-1">Hola, {firstName}</p>
+        ) : (
+          <p className="text-xs text-gray-400 mt-1">Control financiero inteligente</p>
+        )}
       </div>
 
       <nav className="flex-1 px-3 space-y-1">

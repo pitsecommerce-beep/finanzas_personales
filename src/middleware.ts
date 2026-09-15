@@ -41,8 +41,9 @@ export async function middleware(request: NextRequest) {
     console.warn('[FinanzApp] No se pudo verificar la sesión del usuario')
   }
 
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
-                     request.nextUrl.pathname.startsWith('/registro')
+  const isAuthPage = (request.nextUrl.pathname.startsWith('/login') ||
+                     request.nextUrl.pathname.startsWith('/registro')) &&
+                     !request.nextUrl.pathname.startsWith('/onboarding')
   const isDashboardPage = request.nextUrl.pathname.startsWith('/inicio') ||
                           request.nextUrl.pathname.startsWith('/tarjetas') ||
                           request.nextUrl.pathname.startsWith('/gastos') ||
