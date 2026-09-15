@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import type { Transaction } from '@/types/database'
 
 interface UseTransactionsOptions {
@@ -17,20 +17,29 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
   const [loading, setLoading] = useState(true)
 
   const fetchTransactions = useCallback(async () => {
-    const supabase = createClient()
-    let query = supabase
-      .from('transactions')
-      .select('*, card:cards(*)')
-      .order('date', { ascending: false })
+    if (!isSupabaseConfigured()) {
+      console.warn('[FinanzApp] Transacciones: sin conexión a BD')
+      setLoading(false)
+      return
+    }
+    try {
+      const supabase = createClient()
+      let query = supabase
+        .from('transactions')
+        .select('*, card:cards(*)')
+        .order('date', { ascending: false })
 
-    if (options.type) query = query.eq('type', options.type)
-    if (options.cardId) query = query.eq('card_id', options.cardId)
-    if (options.startDate) query = query.gte('date', options.startDate)
-    if (options.endDate) query = query.lte('date', options.endDate)
-    if (options.category) query = query.eq('category', options.category)
+      if (options.type) query = query.eq('type', options.type)
+      if (options.cardId) query = query.eq('card_id', options.cardId)
+      if (options.startDate) query = query.gte('date', options.startDate)
+      if (options.endDate) query = query.lte('date', options.endDate)
+      if (options.category) query = query.eq('category', options.category)
 
-    const { data } = await query
-    setTransactions(data ?? [])
+      const { data } = await query
+      setTransactions(data ?? [])
+    } catch (err) {
+      console.warn('[FinanzApp] Error al cargar transacciones:', err)
+    }
     setLoading(false)
   }, [options.type, options.cardId, options.startDate, options.endDate, options.category])
 
@@ -41,6 +50,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
   async function addTransaction(
     transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'card'>
   ) {
+    if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
@@ -58,6 +68,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
   }
 
   async function deleteTransaction(id: string) {
+    if (!isSupabaseConfigured()) return { error: { message: 'BD no configurada' } }
     const supabase = createClient()
     const { error } = await supabase.from('transactions').delete().eq('id', id)
     if (!error) {

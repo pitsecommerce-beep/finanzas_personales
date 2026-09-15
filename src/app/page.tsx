@@ -1,14 +1,17 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { CreditCard, BarChart3, MessageCircle, Shield } from 'lucide-react'
 
 export default async function LandingPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (user) {
-    redirect('/inicio')
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) redirect('/inicio')
+    } catch {
+      console.warn('[FinanzApp] No se pudo verificar sesión en landing')
+    }
   }
 
   return (

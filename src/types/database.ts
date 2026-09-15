@@ -60,6 +60,20 @@ export interface IncomeSource {
   created_at: string
 }
 
+export type AccountType = 'receivable' | 'payable'
+
+export interface Account {
+  id: string
+  user_id: string
+  type: AccountType
+  person_name: string
+  description: string
+  amount: number
+  due_date: string | null
+  is_paid: boolean
+  created_at: string
+}
+
 export interface AIConfig {
   id: string
   user_id: string

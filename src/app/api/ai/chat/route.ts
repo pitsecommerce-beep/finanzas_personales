@@ -1,7 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ error: 'Base de datos no configurada' }, { status: 503 })
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -11,13 +15,19 @@ export async function POST(request: NextRequest) {
 
   const { messages } = await request.json()
 
-  const [configRes, txRes, cardsRes, fixedRes, incomeRes] = await Promise.all([
-    supabase.from('ai_config').select('*').eq('user_id', user.id).single(),
-    supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(100),
-    supabase.from('cards').select('*').eq('user_id', user.id),
-    supabase.from('fixed_expenses').select('*').eq('user_id', user.id).eq('status', 'active'),
-    supabase.from('income_sources').select('*').eq('user_id', user.id),
-  ])
+  let configRes, txRes, cardsRes, fixedRes, incomeRes
+  try {
+    ;[configRes, txRes, cardsRes, fixedRes, incomeRes] = await Promise.all([
+      supabase.from('ai_config').select('*').eq('user_id', user.id).single(),
+      supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(100),
+      supabase.from('cards').select('*').eq('user_id', user.id),
+      supabase.from('fixed_expenses').select('*').eq('user_id', user.id).eq('status', 'active'),
+      supabase.from('income_sources').select('*').eq('user_id', user.id),
+    ])
+  } catch (err) {
+    console.warn('[FinanzApp] Error al cargar datos para IA:', err)
+    return NextResponse.json({ error: 'Error al cargar datos financieros' }, { status: 500 })
+  }
 
   const systemPrompt = configRes.data?.system_prompt ??
     'Eres un asesor financiero personal. Tienes acceso a los datos financieros del usuario. Ofrece consejos prácticos, identifica patrones de gasto, y sugiere formas de ahorrar. Responde siempre en español y de forma amigable.'
