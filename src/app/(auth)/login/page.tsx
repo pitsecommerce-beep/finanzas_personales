@@ -46,23 +46,25 @@ export default function LoginPage() {
       <Input
         id="email"
         label="Correo electrónico"
+        labelClassName="text-gray-300"
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="tu@correo.com"
         required
-        className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+        className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
       />
 
       <Input
         id="password"
         label="Contraseña"
+        labelClassName="text-gray-300"
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Tu contraseña"
         required
-        className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+        className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
       />
 
       <Button type="submit" loading={loading} className="w-full" size="lg">
