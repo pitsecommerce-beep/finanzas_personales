@@ -1,0 +1,67 @@
+'use client'
+
+import { useEffect, useState, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import type { Card } from '@/types/database'
+
+export function useCards() {
+  const [cards, setCards] = useState<Card[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchCards = useCallback(async () => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('cards')
+      .select('*')
+      .order('created_at', { ascending: false })
+    setCards(data ?? [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    fetchCards()
+  }, [fetchCards])
+
+  async function addCard(card: Omit<Card, 'id' | 'user_id' | 'created_at' | 'updated_at'>) {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+
+    const { data, error } = await supabase
+      .from('cards')
+      .insert({ ...card, user_id: user.id })
+      .select()
+      .single()
+
+    if (!error && data) {
+      setCards((prev) => [data, ...prev])
+    }
+    return { data, error }
+  }
+
+  async function updateCard(id: string, updates: Partial<Card>) {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('cards')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (!error && data) {
+      setCards((prev) => prev.map((c) => (c.id === id ? data : c)))
+    }
+    return { data, error }
+  }
+
+  async function deleteCard(id: string) {
+    const supabase = createClient()
+    const { error } = await supabase.from('cards').delete().eq('id', id)
+    if (!error) {
+      setCards((prev) => prev.filter((c) => c.id !== id))
+    }
+    return { error }
+  }
+
+  return { cards, loading, addCard, updateCard, deleteCard, refetch: fetchCards }
+}
