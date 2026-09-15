@@ -1,19 +1,27 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const isConfigured = !!(supabaseUrl && supabaseKey && supabaseUrl !== 'your_supabase_url')
+
 export async function middleware(request: NextRequest) {
+  if (!isConfigured) {
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl!,
+    supabaseKey!,
     {
       cookies: {
         getAll() {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
           supabaseResponse = NextResponse.next({ request })
@@ -25,7 +33,13 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch {
+    console.warn('[FinanzApp] No se pudo verificar la sesión del usuario')
+  }
 
   const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
                      request.nextUrl.pathname.startsWith('/registro')
@@ -36,7 +50,8 @@ export async function middleware(request: NextRequest) {
                           request.nextUrl.pathname.startsWith('/reportes') ||
                           request.nextUrl.pathname.startsWith('/asesor') ||
                           request.nextUrl.pathname.startsWith('/configuracion') ||
-                          request.nextUrl.pathname.startsWith('/calendario')
+                          request.nextUrl.pathname.startsWith('/calendario') ||
+                          request.nextUrl.pathname.startsWith('/cuentas')
 
   if (!user && isDashboardPage) {
     const url = request.nextUrl.clone()

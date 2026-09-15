@@ -63,6 +63,21 @@ CREATE TABLE income_sources (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Accounts (receivable / payable)
+CREATE TYPE account_type AS ENUM ('receivable', 'payable');
+
+CREATE TABLE accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  type account_type NOT NULL,
+  person_name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  amount NUMERIC(12,2) NOT NULL,
+  due_date DATE,
+  is_paid BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- AI config
 CREATE TABLE ai_config (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -81,16 +96,19 @@ CREATE INDEX idx_transactions_card ON transactions(card_id);
 CREATE INDEX idx_fixed_expenses_user ON fixed_expenses(user_id);
 CREATE INDEX idx_fixed_expenses_card ON fixed_expenses(card_id);
 CREATE INDEX idx_income_sources_user ON income_sources(user_id);
+CREATE INDEX idx_accounts_user ON accounts(user_id);
 
 -- RLS
 ALTER TABLE cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fixed_expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE income_sources ENABLE ROW LEVEL SECURITY;
+ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_config ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can manage their own cards" ON cards FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can manage their own transactions" ON transactions FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can manage their own fixed expenses" ON fixed_expenses FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can manage their own income sources" ON income_sources FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own accounts" ON accounts FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can manage their own AI config" ON ai_config FOR ALL USING (auth.uid() = user_id);

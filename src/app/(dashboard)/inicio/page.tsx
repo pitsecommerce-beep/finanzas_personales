@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { QuickEntry } from '@/components/dashboard/quick-entry'
 import { SummaryCards } from '@/components/dashboard/summary-cards'
 import { SpendingChart } from '@/components/dashboard/spending-chart'
@@ -16,21 +16,30 @@ export default function InicioPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient()
-      const now = new Date()
-      const startOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+      if (!isSupabaseConfigured()) {
+        console.warn('[FinanzApp] Inicio: sin conexión a BD')
+        setLoading(false)
+        return
+      }
+      try {
+        const supabase = createClient()
+        const now = new Date()
+        const startOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
 
-      const [txRes, cardRes] = await Promise.all([
-        supabase
-          .from('transactions')
-          .select('*, card:cards(*)')
-          .gte('date', startOfMonth)
-          .order('date', { ascending: false }),
-        supabase.from('cards').select('*').order('created_at', { ascending: false }),
-      ])
+        const [txRes, cardRes] = await Promise.all([
+          supabase
+            .from('transactions')
+            .select('*, card:cards(*)')
+            .gte('date', startOfMonth)
+            .order('date', { ascending: false }),
+          supabase.from('cards').select('*').order('created_at', { ascending: false }),
+        ])
 
-      setTransactions(txRes.data ?? [])
-      setCards(cardRes.data ?? [])
+        setTransactions(txRes.data ?? [])
+        setCards(cardRes.data ?? [])
+      } catch (err) {
+        console.warn('[FinanzApp] Error al cargar datos de inicio:', err)
+      }
       setLoading(false)
     }
     load()

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/toast'
@@ -15,19 +15,28 @@ export default function ConfiguracionPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!isSupabaseConfigured()) {
+        console.warn('[FinanzApp] Configuración: sin conexión a BD')
+        setLoadingData(false)
+        return
+      }
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) { setLoadingData(false); return }
 
-      const { data } = await supabase
-        .from('ai_config')
-        .select('*')
-        .eq('user_id', user.id)
-        .single()
+        const { data } = await supabase
+          .from('ai_config')
+          .select('*')
+          .eq('user_id', user.id)
+          .single()
 
-      if (data) {
-        setSystemPrompt(data.system_prompt)
-        setModel(data.model)
+        if (data) {
+          setSystemPrompt(data.system_prompt)
+          setModel(data.model)
+        }
+      } catch (err) {
+        console.warn('[FinanzApp] Error al cargar configuración:', err)
       }
       setLoadingData(false)
     }
@@ -35,6 +44,7 @@ export default function ConfiguracionPage() {
   }, [])
 
   async function handleSave() {
+    if (!isSupabaseConfigured()) { toast('BD no configurada', 'error'); return }
     setLoading(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()

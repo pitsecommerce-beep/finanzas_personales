@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import type { IncomeSource } from '@/types/database'
 
 export function useIncome() {
@@ -9,12 +9,21 @@ export function useIncome() {
   const [loading, setLoading] = useState(true)
 
   const fetchSources = useCallback(async () => {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('income_sources')
-      .select('*')
-      .order('created_at', { ascending: false })
-    setSources(data ?? [])
+    if (!isSupabaseConfigured()) {
+      console.warn('[FinanzApp] Ingresos: sin conexión a BD')
+      setLoading(false)
+      return
+    }
+    try {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('income_sources')
+        .select('*')
+        .order('created_at', { ascending: false })
+      setSources(data ?? [])
+    } catch (err) {
+      console.warn('[FinanzApp] Error al cargar ingresos:', err)
+    }
     setLoading(false)
   }, [])
 
@@ -23,6 +32,7 @@ export function useIncome() {
   }, [fetchSources])
 
   async function addSource(source: Omit<IncomeSource, 'id' | 'user_id' | 'created_at'>) {
+    if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
@@ -40,6 +50,7 @@ export function useIncome() {
   }
 
   async function deleteSource(id: string) {
+    if (!isSupabaseConfigured()) return { error: { message: 'BD no configurada' } }
     const supabase = createClient()
     const { error } = await supabase.from('income_sources').delete().eq('id', id)
     if (!error) {

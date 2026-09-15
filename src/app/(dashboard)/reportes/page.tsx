@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { SpendingChart } from '@/components/dashboard/spending-chart'
 import { SummaryCards } from '@/components/dashboard/summary-cards'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
@@ -18,34 +18,43 @@ export default function ReportesPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient()
-      const now = new Date()
-      let startDate: string
-
-      if (period === 'month') {
-        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-      } else if (period === '3months') {
-        const d = subMonths(now, 3)
-        startDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
-      } else {
-        startDate = `${now.getFullYear()}-01-01`
+      if (!isSupabaseConfigured()) {
+        console.warn('[FinanzApp] Reportes: sin conexión a BD')
+        setLoading(false)
+        return
       }
+      try {
+        const supabase = createClient()
+        const now = new Date()
+        let startDate: string
 
-      const [filtered, all] = await Promise.all([
-        supabase
-          .from('transactions')
-          .select('*, card:cards(*)')
-          .gte('date', startDate)
-          .order('date', { ascending: false }),
-        supabase
-          .from('transactions')
-          .select('*')
-          .gte('date', format(subMonths(now, 5), 'yyyy-MM-01'))
-          .order('date', { ascending: true }),
-      ])
+        if (period === 'month') {
+          startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+        } else if (period === '3months') {
+          const d = subMonths(now, 3)
+          startDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+        } else {
+          startDate = `${now.getFullYear()}-01-01`
+        }
 
-      setTransactions(filtered.data ?? [])
-      setAllTransactions(all.data ?? [])
+        const [filtered, all] = await Promise.all([
+          supabase
+            .from('transactions')
+            .select('*, card:cards(*)')
+            .gte('date', startDate)
+            .order('date', { ascending: false }),
+          supabase
+            .from('transactions')
+            .select('*')
+            .gte('date', format(subMonths(now, 5), 'yyyy-MM-01'))
+            .order('date', { ascending: true }),
+        ])
+
+        setTransactions(filtered.data ?? [])
+        setAllTransactions(all.data ?? [])
+      } catch (err) {
+        console.warn('[FinanzApp] Error al cargar reportes:', err)
+      }
       setLoading(false)
     }
     load()

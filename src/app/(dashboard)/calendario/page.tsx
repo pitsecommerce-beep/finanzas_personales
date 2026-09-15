@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -14,13 +14,21 @@ export default function CalendarioPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient()
-      const [c, i] = await Promise.all([
-        supabase.from('cards').select('*'),
-        supabase.from('income_sources').select('*'),
-      ])
-      setCards(c.data ?? [])
-      setIncomeSources(i.data ?? [])
+      if (!isSupabaseConfigured()) {
+        console.warn('[FinanzApp] Calendario: sin conexión a BD')
+        return
+      }
+      try {
+        const supabase = createClient()
+        const [c, i] = await Promise.all([
+          supabase.from('cards').select('*'),
+          supabase.from('income_sources').select('*'),
+        ])
+        setCards(c.data ?? [])
+        setIncomeSources(i.data ?? [])
+      } catch (err) {
+        console.warn('[FinanzApp] Error al cargar calendario:', err)
+      }
     }
     load()
   }, [])

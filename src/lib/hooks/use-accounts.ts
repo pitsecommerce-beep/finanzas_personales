@@ -2,78 +2,78 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
-import type { Card } from '@/types/database'
+import type { Account } from '@/types/database'
 
-export function useCards() {
-  const [cards, setCards] = useState<Card[]>([])
+export function useAccounts() {
+  const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
 
-  const fetchCards = useCallback(async () => {
+  const fetchAccounts = useCallback(async () => {
     if (!isSupabaseConfigured()) {
-      console.warn('[FinanzApp] Tarjetas: sin conexión a BD')
+      console.warn('[FinanzApp] Cuentas: sin conexión a BD')
       setLoading(false)
       return
     }
     try {
       const supabase = createClient()
       const { data } = await supabase
-        .from('cards')
+        .from('accounts')
         .select('*')
-        .order('created_at', { ascending: false })
-      setCards(data ?? [])
+        .order('due_date', { ascending: true, nullsFirst: false })
+      setAccounts(data ?? [])
     } catch (err) {
-      console.warn('[FinanzApp] Error al cargar tarjetas:', err)
+      console.warn('[FinanzApp] Error al cargar cuentas:', err)
     }
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    fetchCards()
-  }, [fetchCards])
+    fetchAccounts()
+  }, [fetchAccounts])
 
-  async function addCard(card: Omit<Card, 'id' | 'user_id' | 'created_at' | 'updated_at'>) {
+  async function addAccount(account: Omit<Account, 'id' | 'user_id' | 'created_at'>) {
     if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
 
     const { data, error } = await supabase
-      .from('cards')
-      .insert({ ...card, user_id: user.id })
+      .from('accounts')
+      .insert({ ...account, user_id: user.id })
       .select()
       .single()
 
     if (!error && data) {
-      setCards((prev) => [data, ...prev])
+      setAccounts((prev) => [data, ...prev])
     }
     return { data, error }
   }
 
-  async function updateCard(id: string, updates: Partial<Card>) {
+  async function updateAccount(id: string, updates: Partial<Account>) {
     if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
     const supabase = createClient()
     const { data, error } = await supabase
-      .from('cards')
+      .from('accounts')
       .update(updates)
       .eq('id', id)
       .select()
       .single()
 
     if (!error && data) {
-      setCards((prev) => prev.map((c) => (c.id === id ? data : c)))
+      setAccounts((prev) => prev.map((a) => (a.id === id ? data : a)))
     }
     return { data, error }
   }
 
-  async function deleteCard(id: string) {
+  async function deleteAccount(id: string) {
     if (!isSupabaseConfigured()) return { error: { message: 'BD no configurada' } }
     const supabase = createClient()
-    const { error } = await supabase.from('cards').delete().eq('id', id)
+    const { error } = await supabase.from('accounts').delete().eq('id', id)
     if (!error) {
-      setCards((prev) => prev.filter((c) => c.id !== id))
+      setAccounts((prev) => prev.filter((a) => a.id !== id))
     }
     return { error }
   }
 
-  return { cards, loading, addCard, updateCard, deleteCard, refetch: fetchCards }
+  return { accounts, loading, addAccount, updateAccount, deleteAccount, refetch: fetchAccounts }
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import type { FixedExpense } from '@/types/database'
 
 export function useFixedExpenses() {
@@ -9,12 +9,21 @@ export function useFixedExpenses() {
   const [loading, setLoading] = useState(true)
 
   const fetchExpenses = useCallback(async () => {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('fixed_expenses')
-      .select('*, card:cards(*)')
-      .order('created_at', { ascending: false })
-    setExpenses(data ?? [])
+    if (!isSupabaseConfigured()) {
+      console.warn('[FinanzApp] Gastos fijos: sin conexión a BD')
+      setLoading(false)
+      return
+    }
+    try {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('fixed_expenses')
+        .select('*, card:cards(*)')
+        .order('created_at', { ascending: false })
+      setExpenses(data ?? [])
+    } catch (err) {
+      console.warn('[FinanzApp] Error al cargar gastos fijos:', err)
+    }
     setLoading(false)
   }, [])
 
@@ -25,6 +34,7 @@ export function useFixedExpenses() {
   async function addExpense(
     expense: Omit<FixedExpense, 'id' | 'user_id' | 'created_at' | 'card'>
   ) {
+    if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
@@ -42,6 +52,7 @@ export function useFixedExpenses() {
   }
 
   async function deleteExpense(id: string) {
+    if (!isSupabaseConfigured()) return { error: { message: 'BD no configurada' } }
     const supabase = createClient()
     const { error } = await supabase.from('fixed_expenses').delete().eq('id', id)
     if (!error) {
