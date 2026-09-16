@@ -31,6 +31,7 @@ const links = [
   { href: '/cuentas', label: 'Cuentas', icon: HandCoins },
   { href: '/ahorro', label: 'Ahorro', icon: PiggyBank },
   { href: '/reportes', label: 'Reportes', icon: BarChart3 },
+  { href: '/pyl', label: 'P&L', icon: HandCoins },
   { href: '/asesor', label: 'Asesor IA', icon: MessageCircle },
   { href: '/calendario', label: 'Calendario', icon: Calendar, badge: 'Pronto' },
   { href: '/configuracion', label: 'Configuración', icon: Settings },

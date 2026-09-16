@@ -49,7 +49,7 @@ export default function GastosFijosPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Gastos fijos</h1>
-          <p className="text-sm text-muted">Pagos diferidos a meses</p>
+          <p className="text-sm text-muted">MSI y gastos mensuales recurrentes</p>
         </div>
         <Button onClick={() => setShowForm(true)} size="sm">
           <Plus size={16} /> Agregar
@@ -65,7 +65,7 @@ export default function GastosFijosPage() {
 
       <FixedExpenseList expenses={expenses} onDelete={handleDelete} />
 
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Nuevo gasto fijo (MSI)">
+      <Modal open={showForm} onClose={() => setShowForm(false)} title="Nuevo gasto fijo">
         <FixedExpenseForm onSuccess={() => { setShowForm(false); refetch() }} />
       </Modal>
 

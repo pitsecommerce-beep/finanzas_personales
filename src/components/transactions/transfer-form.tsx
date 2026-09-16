@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { useCards } from '@/lib/hooks/use-cards'
 import { useTransactions } from '@/lib/hooks/use-transactions'
 import { useToast } from '@/components/ui/toast'
@@ -98,21 +99,15 @@ export function TransferForm({ onSuccess }: TransferFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Monto</label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-lg">$</span>
-          <input
-            type="number"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            required
-            className="w-full rounded-lg border border-border bg-white pl-8 pr-3 py-3 text-2xl font-semibold text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-          />
-        </div>
-      </div>
+      <CurrencyInput
+        id="amount"
+        label="Monto"
+        value={amount}
+        onChange={setAmount}
+        placeholder="0.00"
+        required
+        large
+      />
 
       <Input
         id="description"

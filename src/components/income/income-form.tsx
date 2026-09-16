@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Select } from '@/components/ui/select'
 import { CardSelector } from '@/components/cards/card-selector'
 import { useCards } from '@/lib/hooks/use-cards'
@@ -87,21 +88,15 @@ export function IncomeForm({ source, onSuccess }: IncomeFormProps) {
         options={INCOME_TYPES.map(t => ({ value: t.value, label: t.label }))}
       />
 
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Monto aproximado</label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-lg">$</span>
-          <input
-            type="number"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            required
-            className="w-full rounded-lg border border-border bg-white pl-8 pr-3 py-3 text-xl font-semibold text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-          />
-        </div>
-      </div>
+      <CurrencyInput
+        id="amount"
+        label="Monto aproximado"
+        value={amount}
+        onChange={setAmount}
+        placeholder="0.00"
+        required
+        large
+      />
 
       <div className="space-y-1">
         <label className="block text-sm font-medium text-foreground">Frecuencia de pago</label>

@@ -7,6 +7,7 @@ import { CategoryPicker } from '@/components/transactions/category-picker'
 import { CardSelector } from '@/components/cards/card-selector'
 import { useCards } from '@/lib/hooks/use-cards'
 import { useFixedExpenses } from '@/lib/hooks/use-fixed-expenses'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
 
@@ -121,14 +122,12 @@ export function FixedExpenseForm({ onSuccess }: FixedExpenseFormProps) {
       {isMsi ? (
         <>
           <div className="grid grid-cols-2 gap-3">
-            <Input
+            <CurrencyInput
               id="totalAmount"
               label="Monto total"
-              type="number"
-              step="0.01"
               value={totalAmount}
-              onChange={(e) => setTotalAmount(e.target.value)}
-              placeholder="15000"
+              onChange={setTotalAmount}
+              placeholder="15,000"
               required
             />
             <Input
@@ -152,13 +151,11 @@ export function FixedExpenseForm({ onSuccess }: FixedExpenseFormProps) {
         </>
       ) : (
         <>
-          <Input
+          <CurrencyInput
             id="monthlyAmount"
             label="Monto mensual"
-            type="number"
-            step="0.01"
             value={monthlyAmount}
-            onChange={(e) => setMonthlyAmount(e.target.value)}
+            onChange={setMonthlyAmount}
             placeholder="500"
             required
           />

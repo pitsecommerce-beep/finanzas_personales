@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { CardSelector } from '@/components/cards/card-selector'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
@@ -141,24 +142,20 @@ export default function AhorroPage() {
             placeholder="Ej: Fondo de emergencia, Viaje, Auto"
             required
           />
-          <Input
+          <CurrencyInput
             id="monthlyAmount"
             label="Monto mensual"
-            type="number"
-            step="0.01"
             value={monthlyAmount}
-            onChange={(e) => setMonthlyAmount(e.target.value)}
-            placeholder="5000"
+            onChange={setMonthlyAmount}
+            placeholder="5,000"
             required
           />
-          <Input
+          <CurrencyInput
             id="targetAmount"
             label="Meta total (opcional)"
-            type="number"
-            step="0.01"
             value={targetAmount}
-            onChange={(e) => setTargetAmount(e.target.value)}
-            placeholder="60000"
+            onChange={setTargetAmount}
+            placeholder="60,000"
           />
           <CardSelector
             cards={cards}

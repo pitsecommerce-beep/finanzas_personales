@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Select } from '@/components/ui/select'
 import { BANKS, VOUCHER_BRANDS } from '@/lib/constants/banks'
 import { CARD_COLORS } from '@/lib/constants/colors'
@@ -238,25 +239,22 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
               required
             />
           </div>
-          <Input
+          <CurrencyInput
             id="creditLimit"
-            label="Límite de crédito"
-            type="number"
+            label="Limite de credito"
             value={creditLimit}
-            onChange={(e) => setCreditLimit(e.target.value)}
-            placeholder="50000"
+            onChange={setCreditLimit}
+            placeholder="50,000"
           />
         </>
       )}
 
       {showBalance && (
-        <Input
+        <CurrencyInput
           id="balance"
           label="Saldo actual"
-          type="number"
-          step="0.01"
           value={balance}
-          onChange={(e) => setBalance(e.target.value)}
+          onChange={setBalance}
           placeholder="0.00"
         />
       )}
