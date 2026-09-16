@@ -4,15 +4,16 @@ import { Transaction } from '@/types/database'
 import { getCategoryEmoji, getCategoryLabel } from '@/lib/constants/categories'
 import { formatMXN } from '@/lib/utils/currency'
 import { formatShortDate } from '@/lib/utils/dates'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Pencil } from 'lucide-react'
 
 interface TransactionListProps {
   transactions: Transaction[]
+  onEdit?: (transaction: Transaction) => void
   onDelete?: (id: string) => void
   showType?: boolean
 }
 
-export function TransactionList({ transactions, onDelete, showType = false }: TransactionListProps) {
+export function TransactionList({ transactions, onEdit, onDelete, showType = false }: TransactionListProps) {
   if (transactions.length === 0) {
     return (
       <div className="text-center py-12 text-muted">
@@ -52,6 +53,14 @@ export function TransactionList({ transactions, onDelete, showType = false }: Tr
                 >
                   {t.type === 'expense' ? '-' : '+'}{formatMXN(t.amount)}
                 </span>
+                {onEdit && (
+                  <button
+                    onClick={() => onEdit(t)}
+                    className="text-muted hover:text-accent p-1"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
                 {onDelete && (
                   <button
                     onClick={() => onDelete(t.id)}

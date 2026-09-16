@@ -9,16 +9,14 @@ import { Modal } from '@/components/ui/modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
+import type { Transaction } from '@/types/database'
 
 export default function GastosPage() {
   const { transactions, loading, deleteTransaction, refetch } = useTransactions({ type: 'expense' })
   const [showForm, setShowForm] = useState(false)
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const { toast } = useToast()
-
-  async function handleDelete(id: string) {
-    setDeleteId(id)
-  }
 
   async function confirmDelete() {
     if (!deleteId) return
@@ -48,10 +46,20 @@ export default function GastosPage() {
         </Button>
       </div>
 
-      <TransactionList transactions={transactions} onDelete={handleDelete} />
+      <TransactionList
+        transactions={transactions}
+        onEdit={(tx) => setEditingTx(tx)}
+        onDelete={(id) => setDeleteId(id)}
+      />
 
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Nuevo gasto">
         <TransactionForm type="expense" onSuccess={() => { setShowForm(false); refetch() }} />
+      </Modal>
+
+      <Modal open={!!editingTx} onClose={() => setEditingTx(null)} title="Editar gasto">
+        {editingTx && (
+          <TransactionForm type="expense" transaction={editingTx} onSuccess={() => { setEditingTx(null); refetch() }} />
+        )}
       </Modal>
 
       <ConfirmDialog

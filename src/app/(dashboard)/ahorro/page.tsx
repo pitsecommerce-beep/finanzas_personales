@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2, PiggyBank } from 'lucide-react'
+import { Plus, Trash2, Pencil, PiggyBank } from 'lucide-react'
 import { useSavings } from '@/lib/hooks/use-savings'
 import { useCards } from '@/lib/hooks/use-cards'
 import { Modal } from '@/components/ui/modal'
@@ -12,11 +12,13 @@ import { CurrencyInput } from '@/components/ui/currency-input'
 import { CardSelector } from '@/components/cards/card-selector'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
+import type { SavingsGoal } from '@/types/database'
 
 export default function AhorroPage() {
-  const { goals, loading, addGoal, deleteGoal, refetch } = useSavings()
+  const { goals, loading, addGoal, updateGoal, deleteGoal, refetch } = useSavings()
   const { cards } = useCards()
   const [showForm, setShowForm] = useState(false)
+  const [editingGoal, setEditingGoal] = useState<SavingsGoal | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const { toast } = useToast()
 
@@ -25,27 +27,51 @@ export default function AhorroPage() {
   const [targetAmount, setTargetAmount] = useState('')
   const [cardId, setCardId] = useState<string | null>(null)
 
+  function openCreate() {
+    setDescription('')
+    setMonthlyAmount('')
+    setTargetAmount('')
+    setCardId(null)
+    setShowForm(true)
+  }
+
+  function openEdit(goal: SavingsGoal) {
+    setDescription(goal.description)
+    setMonthlyAmount(goal.monthly_amount.toString())
+    setTargetAmount(goal.target_amount?.toString() ?? '')
+    setCardId(goal.card_id)
+    setEditingGoal(goal)
+  }
+
+  function closeForm() {
+    setShowForm(false)
+    setEditingGoal(null)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const result = await addGoal({
+    const data = {
       description,
       monthly_amount: parseFloat(monthlyAmount),
       target_amount: targetAmount ? parseFloat(targetAmount) : null,
       card_id: cardId,
       is_active: true,
-    })
+    }
+
+    let result
+    if (editingGoal) {
+      result = await updateGoal(editingGoal.id, data)
+    } else {
+      result = await addGoal(data)
+    }
 
     if (result?.error) {
       toast('Error al guardar', 'error')
       return
     }
 
-    toast('Meta de ahorro creada', 'success')
-    setDescription('')
-    setMonthlyAmount('')
-    setTargetAmount('')
-    setCardId(null)
-    setShowForm(false)
+    toast(editingGoal ? 'Meta actualizada' : 'Meta de ahorro creada', 'success')
+    closeForm()
     refetch()
   }
 
@@ -73,7 +99,7 @@ export default function AhorroPage() {
           <h1 className="text-2xl font-bold">Ahorro</h1>
           <p className="text-sm text-muted">Configura metas de ahorro mensual</p>
         </div>
-        <Button onClick={() => setShowForm(true)} size="sm">
+        <Button onClick={openCreate} size="sm">
           <Plus size={16} /> Nueva meta
         </Button>
       </div>
@@ -89,7 +115,7 @@ export default function AhorroPage() {
         <div className="text-center py-16 text-muted">
           <PiggyBank size={48} className="mx-auto mb-3 text-accent/40" />
           <p className="text-sm mb-4">Configura cuanto ahorraras cada mes y hacia donde va ese dinero</p>
-          <Button onClick={() => setShowForm(true)}>Crear meta</Button>
+          <Button onClick={openCreate}>Crear meta</Button>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
@@ -106,6 +132,9 @@ export default function AhorroPage() {
                   <span className={`text-[10px] px-2 py-0.5 rounded-full ${g.is_active ? 'bg-success/10 text-success' : 'bg-gray-100 text-muted'}`}>
                     {g.is_active ? 'Activa' : 'Pausada'}
                   </span>
+                  <button onClick={() => openEdit(g)} className="text-muted hover:text-accent p-1">
+                    <Pencil size={14} />
+                  </button>
                   <button onClick={() => setDeleteId(g.id)} className="text-muted hover:text-danger p-1">
                     <Trash2 size={14} />
                   </button>
@@ -132,7 +161,7 @@ export default function AhorroPage() {
         El dinero asignado a metas de ahorro permanece en tu cuenta pero se considera no disponible para gastos. Si un gasto consume ese dinero, recibiras una alerta.
       </div>
 
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Nueva meta de ahorro">
+      <Modal open={showForm || !!editingGoal} onClose={closeForm} title={editingGoal ? 'Editar meta de ahorro' : 'Nueva meta de ahorro'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             id="description"
@@ -164,7 +193,9 @@ export default function AhorroPage() {
             label="Cuenta destino"
             filterTypes={['debit', 'savings']}
           />
-          <Button type="submit" className="w-full" size="lg">Crear meta</Button>
+          <Button type="submit" className="w-full" size="lg">
+            {editingGoal ? 'Guardar cambios' : 'Crear meta'}
+          </Button>
         </form>
       </Modal>
 

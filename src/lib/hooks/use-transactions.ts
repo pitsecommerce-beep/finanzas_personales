@@ -132,5 +132,21 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
     return { error }
   }
 
-  return { transactions, loading, addTransaction, deleteTransaction, refetch: fetchTransactions }
+  async function updateTransaction(id: string, updates: Record<string, unknown>) {
+    if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('transactions')
+      .update(updates)
+      .eq('id', id)
+      .select('*, card:cards(*)')
+      .single()
+
+    if (!error && data) {
+      setTransactions((prev) => prev.map((t) => (t.id === id ? data : t)))
+    }
+    return { data, error }
+  }
+
+  return { transactions, loading, addTransaction, updateTransaction, deleteTransaction, refetch: fetchTransactions }
 }

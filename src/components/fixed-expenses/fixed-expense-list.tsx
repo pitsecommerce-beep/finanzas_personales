@@ -4,16 +4,17 @@ import type { FixedExpense } from '@/types/database'
 import { getCategoryEmoji } from '@/lib/constants/categories'
 import { formatMXN } from '@/lib/utils/currency'
 import { getRemainingMonths } from '@/lib/utils/dates'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Pencil } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 interface FixedExpenseListProps {
   expenses: FixedExpense[]
+  onEdit?: (expense: FixedExpense) => void
   onDelete?: (id: string) => void
 }
 
-export function FixedExpenseList({ expenses, onDelete }: FixedExpenseListProps) {
+export function FixedExpenseList({ expenses, onEdit, onDelete }: FixedExpenseListProps) {
   if (expenses.length === 0) {
     return (
       <div className="text-center py-12 text-muted">
@@ -45,14 +46,24 @@ export function FixedExpenseList({ expenses, onDelete }: FixedExpenseListProps) 
                       {isMsi ? 'MSI' : 'Mensual'}
                     </span>
                   </div>
-                  {onDelete && (
-                    <button
-                      onClick={() => onDelete(exp.id)}
-                      className="text-muted hover:text-danger p-1"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {onEdit && (
+                      <button
+                        onClick={() => onEdit(exp)}
+                        className="text-muted hover:text-accent p-1"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(exp.id)}
+                        className="text-muted hover:text-danger p-1"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-4 mt-1 text-xs text-muted">
                   <span>Mensualidad: {formatMXN(exp.monthly_amount)}</span>

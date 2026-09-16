@@ -146,13 +146,13 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-1">
         <label className="block text-sm font-medium text-foreground">Tipo<span className="ml-0.5">*</span></label>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
           {typeOptions.map((t) => (
             <button
               key={t.value}
               type="button"
               onClick={() => setCardType(t.value)}
-              className={`flex-1 min-w-[60px] py-2 rounded-lg text-sm font-medium border transition-colors ${
+              className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 cardType === t.value
                   ? 'border-accent bg-accent/10 text-accent'
                   : 'border-border text-muted hover:border-gray-300'

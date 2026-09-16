@@ -61,5 +61,21 @@ export function useFixedExpenses() {
     return { error }
   }
 
-  return { expenses, loading, addExpense, deleteExpense, refetch: fetchExpenses }
+  async function updateExpense(id: string, updates: Record<string, unknown>) {
+    if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('fixed_expenses')
+      .update(updates)
+      .eq('id', id)
+      .select('*, card:cards(*)')
+      .single()
+
+    if (!error && data) {
+      setExpenses((prev) => prev.map((e) => (e.id === id ? data : e)))
+    }
+    return { data, error }
+  }
+
+  return { expenses, loading, addExpense, updateExpense, deleteExpense, refetch: fetchExpenses }
 }
