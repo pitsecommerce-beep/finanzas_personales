@@ -47,6 +47,27 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
     fetchTransactions()
   }, [fetchTransactions])
 
+  async function updateCardBalance(cardId: string, amount: number, type: 'expense' | 'income') {
+    const supabase = createClient()
+    const { data: card } = await supabase
+      .from('cards')
+      .select('balance, card_type')
+      .eq('id', cardId)
+      .single()
+
+    if (!card || card.balance == null) return
+    if (card.card_type !== 'debit' && card.card_type !== 'cash') return
+
+    const newBalance = type === 'expense'
+      ? card.balance - amount
+      : card.balance + amount
+
+    await supabase
+      .from('cards')
+      .update({ balance: newBalance })
+      .eq('id', cardId)
+  }
+
   async function addTransaction(
     transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'card'>
   ) {
@@ -62,6 +83,9 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       .single()
 
     if (!error && data) {
+      if (transaction.card_id) {
+        await updateCardBalance(transaction.card_id, transaction.amount, transaction.type)
+      }
       setTransactions((prev) => [data, ...prev])
     }
     return { data, error }
@@ -70,8 +94,15 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
   async function deleteTransaction(id: string) {
     if (!isSupabaseConfigured()) return { error: { message: 'BD no configurada' } }
     const supabase = createClient()
+
+    const tx = transactions.find((t) => t.id === id)
+
     const { error } = await supabase.from('transactions').delete().eq('id', id)
     if (!error) {
+      if (tx?.card_id) {
+        const reverseType = tx.type === 'expense' ? 'income' : 'expense'
+        await updateCardBalance(tx.card_id, tx.amount, reverseType as 'expense' | 'income')
+      }
       setTransactions((prev) => prev.filter((t) => t.id !== id))
     }
     return { error }

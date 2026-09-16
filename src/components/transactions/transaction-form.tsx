@@ -98,9 +98,7 @@ export function TransactionForm({ type, onSuccess }: TransactionFormProps) {
 
       <CategoryPicker type={type} value={category} onChange={setCategory} />
 
-      {type === 'expense' && (
-        <CardSelector cards={cards} value={cardId} onChange={setCardId} />
-      )}
+      <CardSelector cards={cards} value={cardId} onChange={setCardId} />
 
       <Input
         id="date"
