@@ -20,8 +20,16 @@ export default function GastosFijosPage() {
 
   const activeExpenses = expenses.filter((e) => e.status === 'active')
   const totalMonthly = activeExpenses.reduce((sum, e) => {
-    const remaining = getRemainingMonths(e.start_date, e.total_months)
-    return sum + (remaining > 0 ? Number(e.monthly_amount) : 0)
+    const isMsi = e.is_msi !== false && e.total_months > 1
+    if (isMsi) {
+      const remaining = getRemainingMonths(e.start_date, e.total_months)
+      return sum + (remaining > 0 ? Number(e.monthly_amount) : 0)
+    }
+    const now = new Date()
+    const start = new Date(e.start_date)
+    if (start > now) return sum
+    if (e.end_date && new Date(e.end_date) < now) return sum
+    return sum + Number(e.monthly_amount)
   }, 0)
 
   async function handleDelete(id: string) {
@@ -49,7 +57,7 @@ export default function GastosFijosPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Gastos fijos</h1>
-          <p className="text-sm text-muted">Pagos diferidos a meses</p>
+          <p className="text-sm text-muted">MSI y gastos mensuales recurrentes</p>
         </div>
         <Button onClick={() => setShowForm(true)} size="sm">
           <Plus size={16} /> Agregar
@@ -65,7 +73,7 @@ export default function GastosFijosPage() {
 
       <FixedExpenseList expenses={expenses} onDelete={handleDelete} />
 
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Nuevo gasto fijo (MSI)">
+      <Modal open={showForm} onClose={() => setShowForm(false)} title="Nuevo gasto fijo">
         <FixedExpenseForm onSuccess={() => { setShowForm(false); refetch() }} />
       </Modal>
 

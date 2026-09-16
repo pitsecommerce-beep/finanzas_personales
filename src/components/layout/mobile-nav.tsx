@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, CreditCard, ArrowDownCircle, BarChart3, Settings } from 'lucide-react'
+import { Home, CreditCard, ArrowDownCircle, PiggyBank, BarChart3, Settings } from 'lucide-react'
 
 const tabs = [
   { href: '/inicio', label: 'Inicio', icon: Home },
   { href: '/tarjetas', label: 'Tarjetas', icon: CreditCard },
   { href: '/gastos', label: 'Gastos', icon: ArrowDownCircle },
+  { href: '/ahorro', label: 'Ahorro', icon: PiggyBank },
   { href: '/reportes', label: 'Reportes', icon: BarChart3 },
   { href: '/configuracion', label: 'Más', icon: Settings },
 ]

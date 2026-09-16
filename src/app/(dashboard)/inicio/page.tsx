@@ -50,11 +50,11 @@ export default function InicioPage() {
   }, [])
 
   const income = transactions
-    .filter((t) => t.type === 'income')
+    .filter((t) => t.type === 'income' && !t.is_transfer)
     .reduce((sum, t) => sum + Number(t.amount), 0)
 
   const expenses = transactions
-    .filter((t) => t.type === 'expense')
+    .filter((t) => t.type === 'expense' && !t.is_transfer)
     .reduce((sum, t) => sum + Number(t.amount), 0)
 
   if (loading) {
@@ -76,7 +76,7 @@ export default function InicioPage() {
 
       <QuickEntry />
 
-      <SummaryCards income={income} expenses={expenses} />
+      <SummaryCards income={income} expenses={expenses} cards={cards} />
 
       <div className="grid lg:grid-cols-2 gap-6">
         <SpendingChart transactions={transactions} />

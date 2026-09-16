@@ -22,7 +22,19 @@ export const INCOME_CATEGORIES = [
   { id: 'freelance', label: 'Freelance', emoji: '💻' },
   { id: 'negocio', label: 'Negocio', emoji: '🏢' },
   { id: 'inversiones', label: 'Inversiones', emoji: '📈' },
+  { id: 'rendimientos', label: 'Rendimientos', emoji: '🏦' },
+  { id: 'renta', label: 'Renta', emoji: '🏘️' },
+  { id: 'venta', label: 'Venta', emoji: '🏷️' },
   { id: 'otros', label: 'Otros', emoji: '💰' },
+] as const
+
+export const INCOME_TYPES = [
+  { value: 'salary', label: 'Salario' },
+  { value: 'freelance', label: 'Freelance' },
+  { value: 'business', label: 'Negocio' },
+  { value: 'investment', label: 'Inversión' },
+  { value: 'rental', label: 'Renta' },
+  { value: 'other', label: 'Otro' },
 ] as const
 
 export type ExpenseCategoryId = typeof EXPENSE_CATEGORIES[number]['id']

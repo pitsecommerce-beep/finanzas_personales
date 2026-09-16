@@ -32,7 +32,7 @@ export function useFixedExpenses() {
   }, [fetchExpenses])
 
   async function addExpense(
-    expense: Omit<FixedExpense, 'id' | 'user_id' | 'created_at' | 'card'>
+    expense: Record<string, unknown>
   ) {
     if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
     const supabase = createClient()

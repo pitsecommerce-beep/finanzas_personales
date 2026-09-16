@@ -3,6 +3,8 @@
 import { useEffect, useRef } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 
+const YIELD_LIMIT = 25000
+
 export function useYields() {
   const processed = useRef(false)
 
@@ -24,7 +26,7 @@ async function applyYields() {
     .from('cards')
     .select('*')
     .eq('has_yields', true)
-    .eq('card_type', 'debit')
+    .in('card_type', ['savings'])
     .not('yield_rate', 'is', null)
     .not('balance', 'is', null)
 
@@ -46,18 +48,26 @@ async function applyYields() {
     const pendingDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
     if (pendingDays <= 0) continue
 
-    const dailyRate = (card.yield_rate / 100) / 365
+    const annualRate = card.yield_rate / 100
+    const aboveRate = (card.yield_rate_above_limit ?? 0) / 100
     let currentBalance = card.balance
     let totalYield = 0
 
     for (let i = 0; i < pendingDays; i++) {
-      const dayYield = Math.round(currentBalance * dailyRate * 100) / 100
+      let dayYield: number
+      if (currentBalance <= YIELD_LIMIT) {
+        dayYield = currentBalance * annualRate / 365
+      } else {
+        const yieldOnLimit = YIELD_LIMIT * annualRate / 365
+        const yieldAbove = (currentBalance - YIELD_LIMIT) * aboveRate / 365
+        dayYield = yieldOnLimit + yieldAbove
+      }
+      dayYield = Math.round(dayYield * 100) / 100
       totalYield += dayYield
       currentBalance += dayYield
     }
 
     if (totalYield <= 0) continue
-
     totalYield = Math.round(totalYield * 100) / 100
 
     await supabase.from('transactions').insert({
@@ -65,13 +75,15 @@ async function applyYields() {
       card_id: card.id,
       amount: totalYield,
       description: `Rendimientos ${card.alias} (${pendingDays} día${pendingDays > 1 ? 's' : ''})`,
-      category: 'Rendimientos',
+      category: 'rendimientos',
       type: 'income',
       date: todayStr,
       is_recurring: false,
       installment_months: null,
       installment_current: null,
       notes: null,
+      is_transfer: false,
+      currency: 'MXN',
     })
 
     await supabase

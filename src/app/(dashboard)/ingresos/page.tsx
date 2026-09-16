@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Pencil } from 'lucide-react'
 import { useIncome } from '@/lib/hooks/use-income'
 import { useTransactions } from '@/lib/hooks/use-transactions'
 import { TransactionList } from '@/components/transactions/transaction-list'
@@ -12,6 +12,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
+import type { IncomeSource } from '@/types/database'
 
 const FREQ_LABELS: Record<string, string> = {
   weekly: 'Semanal',
@@ -19,10 +20,20 @@ const FREQ_LABELS: Record<string, string> = {
   monthly: 'Mensual',
 }
 
+const TYPE_LABELS: Record<string, string> = {
+  salary: 'Salario',
+  freelance: 'Freelance',
+  business: 'Negocio',
+  investment: 'Inversión',
+  rental: 'Renta',
+  other: 'Otro',
+}
+
 export default function IngresosPage() {
   const { sources, loading: sourcesLoading, deleteSource, refetch: refetchSources } = useIncome()
   const { transactions, loading: txLoading, deleteTransaction, refetch: refetchTx } = useTransactions({ type: 'income' })
   const [showIncomeForm, setShowIncomeForm] = useState(false)
+  const [editingSource, setEditingSource] = useState<IncomeSource | null>(null)
   const [showTxForm, setShowTxForm] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; kind: 'source' | 'tx' } | null>(null)
   const { toast } = useToast()
@@ -73,9 +84,18 @@ export default function IngresosPage() {
                 </div>
                 <div className="flex-1">
                   <p className="font-medium text-sm">{s.description}</p>
-                  <p className="text-xs text-muted">{FREQ_LABELS[s.frequency] ?? s.frequency}</p>
+                  <p className="text-xs text-muted">
+                    {TYPE_LABELS[s.income_type] ?? 'Otro'} · {FREQ_LABELS[s.frequency] ?? s.frequency}
+                    {s.card && ` · ${s.card.alias}`}
+                  </p>
                 </div>
                 <p className="font-semibold text-success text-sm">{formatMXN(s.amount)}</p>
+                <button
+                  onClick={() => setEditingSource(s)}
+                  className="text-muted hover:text-accent p-1"
+                >
+                  <Pencil size={14} />
+                </button>
                 <button
                   onClick={() => setDeleteTarget({ id: s.id, kind: 'source' })}
                   className="text-muted hover:text-danger p-1"
@@ -98,6 +118,12 @@ export default function IngresosPage() {
 
       <Modal open={showIncomeForm} onClose={() => setShowIncomeForm(false)} title="Nueva fuente de ingreso">
         <IncomeForm onSuccess={() => { setShowIncomeForm(false); refetchSources() }} />
+      </Modal>
+
+      <Modal open={!!editingSource} onClose={() => setEditingSource(null)} title="Editar fuente de ingreso">
+        {editingSource && (
+          <IncomeForm source={editingSource} onSuccess={() => { setEditingSource(null); refetchSources() }} />
+        )}
       </Modal>
 
       <Modal open={showTxForm} onClose={() => setShowTxForm(false)} title="Registrar ingreso">

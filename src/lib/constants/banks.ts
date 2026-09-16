@@ -18,5 +18,16 @@ export const BANKS = [
   'Klar',
   'Mercado Pago',
   'Revolut',
+  'GBM',
+  'CETES Directo',
+  'Otro',
+] as const
+
+export const VOUCHER_BRANDS = [
+  'Pluxee (Sodexo)',
+  'Efectivale',
+  'SíVale',
+  'Edenred',
+  'Up Sí Vale',
   'Otro',
 ] as const

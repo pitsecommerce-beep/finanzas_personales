@@ -8,11 +8,12 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { formatMXN } from '@/lib/utils/currency'
 import { format, subMonths, startOfMonth } from 'date-fns'
 import { es } from 'date-fns/locale'
-import type { Transaction } from '@/types/database'
+import type { Transaction, Card } from '@/types/database'
 
 export default function ReportesPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([])
+  const [cards, setCards] = useState<Card[]>([])
   const [period, setPeriod] = useState('month')
   const [loading, setLoading] = useState(true)
 
@@ -37,7 +38,7 @@ export default function ReportesPage() {
           startDate = `${now.getFullYear()}-01-01`
         }
 
-        const [filtered, all] = await Promise.all([
+        const [filtered, all, cardRes] = await Promise.all([
           supabase
             .from('transactions')
             .select('*, card:cards(*)')
@@ -48,10 +49,12 @@ export default function ReportesPage() {
             .select('*')
             .gte('date', format(subMonths(now, 5), 'yyyy-MM-01'))
             .order('date', { ascending: true }),
+          supabase.from('cards').select('*'),
         ])
 
         setTransactions(filtered.data ?? [])
         setAllTransactions(all.data ?? [])
+        setCards(cardRes.data ?? [])
       } catch (err) {
         console.warn('[Nummo] Error al cargar reportes:', err)
       }
@@ -61,11 +64,11 @@ export default function ReportesPage() {
   }, [period])
 
   const income = transactions
-    .filter((t) => t.type === 'income')
+    .filter((t) => t.type === 'income' && !t.is_transfer)
     .reduce((sum, t) => sum + Number(t.amount), 0)
 
   const expenses = transactions
-    .filter((t) => t.type === 'expense')
+    .filter((t) => t.type === 'expense' && !t.is_transfer)
     .reduce((sum, t) => sum + Number(t.amount), 0)
 
   const monthlyData = (() => {
@@ -80,6 +83,7 @@ export default function ReportesPage() {
       }
     }
     allTransactions.forEach((t) => {
+      if (t.is_transfer) return
       const key = t.date.slice(0, 7)
       if (months[key]) {
         if (t.type === 'income') months[key].ingresos += Number(t.amount)
@@ -120,7 +124,7 @@ export default function ReportesPage() {
         </div>
       </div>
 
-      <SummaryCards income={income} expenses={expenses} />
+      <SummaryCards income={income} expenses={expenses} cards={cards} />
 
       <SpendingChart transactions={transactions} />
 
