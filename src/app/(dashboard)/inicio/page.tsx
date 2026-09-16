@@ -76,7 +76,7 @@ export default function InicioPage() {
 
       <QuickEntry />
 
-      <SummaryCards income={income} expenses={expenses} />
+      <SummaryCards income={income} expenses={expenses} cards={cards} />
 
       <div className="grid lg:grid-cols-2 gap-6">
         <SpendingChart transactions={transactions} />
