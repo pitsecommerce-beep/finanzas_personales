@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -8,31 +8,47 @@ import { BANKS } from '@/lib/constants/banks'
 import { CARD_COLORS } from '@/lib/constants/colors'
 import { useCards } from '@/lib/hooks/use-cards'
 import { useToast } from '@/components/ui/toast'
-import type { CardType } from '@/types/database'
+import type { Card, CardType } from '@/types/database'
 
 interface CardFormProps {
+  card?: Card
   onSuccess?: () => void
 }
 
-export function CardForm({ onSuccess }: CardFormProps) {
-  const [bankName, setBankName] = useState('')
-  const [alias, setAlias] = useState('')
-  const [cardType, setCardType] = useState<CardType>('credit')
-  const [lastFour, setLastFour] = useState('')
-  const [cutOffDay, setCutOffDay] = useState('')
-  const [paymentDay, setPaymentDay] = useState('')
-  const [creditLimit, setCreditLimit] = useState('')
-  const [color, setColor] = useState('#14B8A6')
+export function CardForm({ card, onSuccess }: CardFormProps) {
+  const [bankName, setBankName] = useState(card?.bank_name ?? '')
+  const [alias, setAlias] = useState(card?.alias ?? '')
+  const [cardType, setCardType] = useState<CardType>(card?.card_type ?? 'credit')
+  const [lastFour, setLastFour] = useState(card?.last_four_digits ?? '')
+  const [cutOffDay, setCutOffDay] = useState(card?.cut_off_day?.toString() ?? '')
+  const [paymentDay, setPaymentDay] = useState(card?.payment_day?.toString() ?? '')
+  const [creditLimit, setCreditLimit] = useState(card?.credit_limit?.toString() ?? '')
+  const [color, setColor] = useState(card?.color ?? '#14B8A6')
   const [loading, setLoading] = useState(false)
 
-  const { addCard } = useCards()
+  const { addCard, updateCard } = useCards()
   const { toast } = useToast()
+
+  const isEditing = !!card
+
+  useEffect(() => {
+    if (card) {
+      setBankName(card.bank_name)
+      setAlias(card.alias)
+      setCardType(card.card_type)
+      setLastFour(card.last_four_digits ?? '')
+      setCutOffDay(card.cut_off_day?.toString() ?? '')
+      setPaymentDay(card.payment_day?.toString() ?? '')
+      setCreditLimit(card.credit_limit?.toString() ?? '')
+      setColor(card.color)
+    }
+  }, [card])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
 
-    const result = await addCard({
+    const cardData = {
       bank_name: bankName,
       alias,
       card_type: cardType,
@@ -41,16 +57,23 @@ export function CardForm({ onSuccess }: CardFormProps) {
       payment_day: parseInt(paymentDay),
       credit_limit: creditLimit ? parseFloat(creditLimit) : null,
       color,
-    })
+    }
+
+    let result
+    if (isEditing) {
+      result = await updateCard(card.id, cardData)
+    } else {
+      result = await addCard(cardData)
+    }
 
     setLoading(false)
 
     if (result?.error) {
-      toast('Error al guardar la tarjeta', 'error')
+      toast(`Error al ${isEditing ? 'actualizar' : 'guardar'} la tarjeta`, 'error')
       return
     }
 
-    toast('Tarjeta agregada', 'success')
+    toast(isEditing ? 'Tarjeta actualizada' : 'Tarjeta agregada', 'success')
     onSuccess?.()
   }
 
@@ -89,7 +112,7 @@ export function CardForm({ onSuccess }: CardFormProps) {
                   : 'border-border text-muted hover:border-gray-300'
               }`}
             >
-              {t === 'credit' ? 'Crédito' : 'Débito'}
+              {t === 'credit' ? 'Credito' : 'Debito'}
             </button>
           ))}
         </div>
@@ -97,7 +120,7 @@ export function CardForm({ onSuccess }: CardFormProps) {
 
       <Input
         id="lastFour"
-        label="Últimos 4 dígitos"
+        label="Ultimos 4 digitos"
         value={lastFour}
         onChange={(e) => setLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))}
         placeholder="1234"
@@ -107,7 +130,7 @@ export function CardForm({ onSuccess }: CardFormProps) {
       <div className="grid grid-cols-2 gap-3">
         <Input
           id="cutOff"
-          label="Día de corte"
+          label="Dia de corte"
           type="number"
           min="1"
           max="31"
@@ -118,7 +141,7 @@ export function CardForm({ onSuccess }: CardFormProps) {
         />
         <Input
           id="paymentDay"
-          label="Día de pago"
+          label="Dia de pago"
           type="number"
           min="1"
           max="31"
@@ -132,7 +155,7 @@ export function CardForm({ onSuccess }: CardFormProps) {
       {cardType === 'credit' && (
         <Input
           id="creditLimit"
-          label="Límite de crédito"
+          label="Limite de credito"
           type="number"
           value={creditLimit}
           onChange={(e) => setCreditLimit(e.target.value)}
@@ -159,7 +182,7 @@ export function CardForm({ onSuccess }: CardFormProps) {
       </div>
 
       <Button type="submit" loading={loading} className="w-full" size="lg">
-        Agregar tarjeta
+        {isEditing ? 'Guardar cambios' : 'Agregar tarjeta'}
       </Button>
     </form>
   )

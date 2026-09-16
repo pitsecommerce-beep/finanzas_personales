@@ -9,15 +9,22 @@ import { Modal } from '@/components/ui/modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
+import type { Card } from '@/types/database'
 
 export default function TarjetasPage() {
   const { cards, loading, deleteCard, refetch } = useCards()
   const [showForm, setShowForm] = useState(false)
+  const [editingCard, setEditingCard] = useState<Card | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const { toast } = useToast()
 
-  async function handleDelete(id: string) {
-    setDeleteId(id)
+  function handleEdit(card: Card) {
+    setEditingCard(card)
+  }
+
+  function handleCloseForm() {
+    setShowForm(false)
+    setEditingCard(null)
   }
 
   async function confirmDelete() {
@@ -57,13 +64,19 @@ export default function TarjetasPage() {
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
           {cards.map((card) => (
-            <CardItem key={card.id} card={card} onDelete={handleDelete} />
+            <CardItem key={card.id} card={card} onEdit={handleEdit} onDelete={(id) => setDeleteId(id)} />
           ))}
         </div>
       )}
 
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Nueva tarjeta">
-        <CardForm onSuccess={() => { setShowForm(false); refetch() }} />
+      <Modal open={showForm} onClose={handleCloseForm} title="Nueva tarjeta">
+        <CardForm onSuccess={() => { handleCloseForm(); refetch() }} />
+      </Modal>
+
+      <Modal open={!!editingCard} onClose={handleCloseForm} title="Editar tarjeta">
+        {editingCard && (
+          <CardForm card={editingCard} onSuccess={() => { handleCloseForm(); refetch() }} />
+        )}
       </Modal>
 
       <ConfirmDialog

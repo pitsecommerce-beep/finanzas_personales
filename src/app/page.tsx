@@ -18,8 +18,8 @@ export default async function LandingPage() {
     <div className="min-h-screen bg-primary text-white flex flex-col">
       <header className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 gap-3 max-w-6xl mx-auto w-full">
         <div className="flex items-center gap-2">
-          <img src="/favicon_nummo.png" alt="Nummo" className="h-8 w-8 rounded-lg" />
-          <h1 className="text-2xl font-bold text-accent">Nummo</h1>
+          <img src="/favicon_nummo.png" alt="Nummo" className="h-12 w-12 rounded-xl" />
+          <h1 className="text-3xl font-bold text-accent">Nummo</h1>
         </div>
         <div className="flex gap-3">
           <Link

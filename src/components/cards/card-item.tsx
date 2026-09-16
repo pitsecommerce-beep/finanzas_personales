@@ -1,14 +1,15 @@
 'use client'
 
 import type { Card } from '@/types/database'
-import { CreditCard, Trash2 } from 'lucide-react'
+import { CreditCard, Trash2, Pencil } from 'lucide-react'
 
 interface CardItemProps {
   card: Card
+  onEdit?: (card: Card) => void
   onDelete?: (id: string) => void
 }
 
-export function CardItem({ card, onDelete }: CardItemProps) {
+export function CardItem({ card, onEdit, onDelete }: CardItemProps) {
   return (
     <div
       className="relative rounded-xl p-5 text-white min-h-[180px] flex flex-col justify-between overflow-hidden"
@@ -26,8 +27,16 @@ export function CardItem({ card, onDelete }: CardItemProps) {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase font-medium">
-            {card.card_type === 'credit' ? 'Crédito' : 'Débito'}
+            {card.card_type === 'credit' ? 'Credito' : 'Debito'}
           </span>
+          {onEdit && (
+            <button
+              onClick={() => onEdit(card)}
+              className="text-white/60 hover:text-white p-1"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
           {onDelete && (
             <button
               onClick={() => onDelete(card.id)}
@@ -41,7 +50,7 @@ export function CardItem({ card, onDelete }: CardItemProps) {
 
       <div className="relative">
         <p className="text-lg tracking-widest font-mono">
-          •••• •••• •••• {card.last_four_digits ?? '••••'}
+          &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; {card.last_four_digits ?? '&&bull;&bull;&bull;&bull;'}
         </p>
       </div>
 
@@ -49,11 +58,11 @@ export function CardItem({ card, onDelete }: CardItemProps) {
         <div className="flex gap-6 text-xs">
           <div>
             <p className="text-white/60">Corte</p>
-            <p className="font-medium">Día {card.cut_off_day}</p>
+            <p className="font-medium">Dia {card.cut_off_day}</p>
           </div>
           <div>
             <p className="text-white/60">Pago</p>
-            <p className="font-medium">Día {card.payment_day}</p>
+            <p className="font-medium">Dia {card.payment_day}</p>
           </div>
         </div>
         <CreditCard size={24} className="text-white/40" />
