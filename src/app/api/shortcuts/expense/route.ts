@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
   const amount = Number(body.amount)
   const merchant = String(body.merchant || body.description || '')
-  const cardId = (body.card_id as string) || null
+  const cardHint = String(body.card || '')
   const date = (body.date as string) || todayMX()
 
   if (!amount || amount <= 0) {
@@ -78,6 +78,33 @@ export async function POST(request: NextRequest) {
   }
   if (!merchant) {
     return NextResponse.json({ error: 'Comercio/descripción requerido' }, { status: 400 })
+  }
+
+  let cardId: string | null = null
+  let matchedCard: string | null = null
+
+  if (cardHint) {
+    const { data: cards } = await supabase
+      .from('cards')
+      .select('id, alias, last_four_digits, bank_name, card_type')
+      .eq('user_id', tokenRow.user_id)
+
+    if (cards?.length) {
+      const hint = cardHint.toLowerCase().trim()
+      const digits = hint.replace(/\D/g, '').slice(-4)
+
+      const match = cards.find(c => {
+        if (digits.length === 4 && c.last_four_digits === digits) return true
+        const alias = (c.alias || '').toLowerCase()
+        const bank = (c.bank_name || '').toLowerCase()
+        return alias.includes(hint) || bank.includes(hint) || hint.includes(alias)
+      })
+
+      if (match) {
+        cardId = match.id
+        matchedCard = match.alias
+      }
+    }
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -105,6 +132,6 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    message: `Gasto registrado: $${amount} - ${merchant} (${category})`,
+    message: `Gasto registrado: $${amount} - ${merchant} (${category})${matchedCard ? ` en ${matchedCard}` : ''}`,
   })
 }

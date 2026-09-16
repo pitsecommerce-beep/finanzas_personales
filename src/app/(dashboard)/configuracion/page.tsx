@@ -374,7 +374,7 @@ export default function ConfiguracionPage() {
                   <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-3">
                     <p className="text-sm font-medium">3. Configurar el cuerpo JSON</p>
                     <p className="text-xs text-muted">
-                      En <strong>Cuerpo</strong> elige <strong>JSON</strong>, agrega dos campos:
+                      En <strong>Cuerpo</strong> elige <strong>JSON</strong>, agrega tres campos:
                     </p>
 
                     <CopyField
@@ -384,7 +384,7 @@ export default function ConfiguracionPage() {
                       onCopy={() => copyToClipboard('amount', 'k1')}
                     />
                     <p className="text-xs text-muted -mt-1">
-                      Valor: selecciona la variable magica <strong>Monto</strong>
+                      Valor: variable magica <strong>Monto</strong>
                     </p>
 
                     <CopyField
@@ -394,7 +394,17 @@ export default function ConfiguracionPage() {
                       onCopy={() => copyToClipboard('merchant', 'k2')}
                     />
                     <p className="text-xs text-muted -mt-1">
-                      Valor: selecciona la variable magica <strong>Comercio</strong>
+                      Valor: variable magica <strong>Comercio</strong>
+                    </p>
+
+                    <CopyField
+                      label="Clave 3"
+                      value="card"
+                      copied={copiedField === 'k3'}
+                      onCopy={() => copyToClipboard('card', 'k3')}
+                    />
+                    <p className="text-xs text-muted -mt-1">
+                      Valor: variable magica <strong>Tarjeta</strong> (se empareja con tus tarjetas en Nummo por nombre o ultimos 4 digitos)
                     </p>
                   </div>
                 </div>
