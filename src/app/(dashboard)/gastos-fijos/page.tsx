@@ -6,6 +6,7 @@ import { useFixedExpenses } from '@/lib/hooks/use-fixed-expenses'
 import { FixedExpenseList } from '@/components/fixed-expenses/fixed-expense-list'
 import { FixedExpenseForm } from '@/components/fixed-expenses/fixed-expense-form'
 import { Modal } from '@/components/ui/modal'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
@@ -14,6 +15,7 @@ import { getRemainingMonths } from '@/lib/utils/dates'
 export default function GastosFijosPage() {
   const { expenses, loading, deleteExpense, refetch } = useFixedExpenses()
   const [showForm, setShowForm] = useState(false)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const { toast } = useToast()
 
   const activeExpenses = expenses.filter((e) => e.status === 'active')
@@ -23,10 +25,15 @@ export default function GastosFijosPage() {
   }, 0)
 
   async function handleDelete(id: string) {
-    if (!confirm('¿Eliminar este gasto fijo?')) return
-    const { error } = await deleteExpense(id)
+    setDeleteId(id)
+  }
+
+  async function confirmDelete() {
+    if (!deleteId) return
+    const { error } = await deleteExpense(deleteId)
     if (error) toast('Error al eliminar', 'error')
     else toast('Gasto fijo eliminado', 'success')
+    setDeleteId(null)
   }
 
   if (loading) {
@@ -61,6 +68,15 @@ export default function GastosFijosPage() {
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Nuevo gasto fijo (MSI)">
         <FixedExpenseForm onSuccess={() => { setShowForm(false); refetch() }} />
       </Modal>
+
+      <ConfirmDialog
+        open={!!deleteId}
+        title="Eliminar gasto fijo"
+        message="Esta accion no se puede deshacer. ¿Deseas continuar?"
+        confirmLabel="Eliminar"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   )
 }

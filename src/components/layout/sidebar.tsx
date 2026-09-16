@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -18,6 +19,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useProfileContext } from '@/lib/context/profile-context'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 const links = [
   { href: '/inicio', label: 'Inicio', icon: Home },
@@ -36,6 +38,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { firstName } = useProfileContext()
+  const [showLogout, setShowLogout] = useState(false)
 
   async function handleLogout() {
     const supabase = createClient()
@@ -81,13 +84,23 @@ export function Sidebar() {
 
       <div className="p-3 border-t border-white/10">
         <button
-          onClick={handleLogout}
+          onClick={() => setShowLogout(true)}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors w-full"
         >
           <LogOut size={18} />
           <span>Cerrar sesión</span>
         </button>
       </div>
+
+      <ConfirmDialog
+        open={showLogout}
+        title="Cerrar sesion"
+        message="¿Seguro que deseas cerrar tu sesion?"
+        confirmLabel="Cerrar sesion"
+        variant="warning"
+        onConfirm={handleLogout}
+        onCancel={() => setShowLogout(false)}
+      />
     </aside>
   )
 }

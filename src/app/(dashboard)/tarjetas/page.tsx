@@ -6,19 +6,26 @@ import { useCards } from '@/lib/hooks/use-cards'
 import { CardItem } from '@/components/cards/card-item'
 import { CardForm } from '@/components/cards/card-form'
 import { Modal } from '@/components/ui/modal'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 
 export default function TarjetasPage() {
   const { cards, loading, deleteCard, refetch } = useCards()
   const [showForm, setShowForm] = useState(false)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const { toast } = useToast()
 
   async function handleDelete(id: string) {
-    if (!confirm('¿Eliminar esta tarjeta?')) return
-    const { error } = await deleteCard(id)
+    setDeleteId(id)
+  }
+
+  async function confirmDelete() {
+    if (!deleteId) return
+    const { error } = await deleteCard(deleteId)
     if (error) toast('Error al eliminar', 'error')
     else toast('Tarjeta eliminada', 'success')
+    setDeleteId(null)
   }
 
   if (loading) {
@@ -58,6 +65,15 @@ export default function TarjetasPage() {
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Nueva tarjeta">
         <CardForm onSuccess={() => { setShowForm(false); refetch() }} />
       </Modal>
+
+      <ConfirmDialog
+        open={!!deleteId}
+        title="Eliminar tarjeta"
+        message="Esta accion no se puede deshacer. ¿Deseas continuar?"
+        confirmLabel="Eliminar"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   )
 }

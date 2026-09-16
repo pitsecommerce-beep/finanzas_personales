@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useToast } from '@/components/ui/toast'
 
 export default function ConfiguracionPage() {
@@ -11,6 +12,7 @@ export default function ConfiguracionPage() {
   const [model, setModel] = useState('claude-sonnet-4-20250514')
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
+  const [showLogout, setShowLogout] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -115,17 +117,24 @@ export default function ConfiguracionPage() {
       <div className="bg-white rounded-xl border border-border p-6 space-y-3">
         <h2 className="font-semibold">Cuenta</h2>
         <p className="text-sm text-muted">Gestiona tu cuenta y sesión</p>
-        <Button
-          variant="danger"
-          onClick={async () => {
-            const supabase = createClient()
-            await supabase.auth.signOut()
-            window.location.href = '/login'
-          }}
-        >
+        <Button variant="danger" onClick={() => setShowLogout(true)}>
           Cerrar sesión
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={showLogout}
+        title="Cerrar sesion"
+        message="¿Seguro que deseas cerrar tu sesion?"
+        confirmLabel="Cerrar sesion"
+        variant="warning"
+        onConfirm={async () => {
+          const supabase = createClient()
+          await supabase.auth.signOut()
+          window.location.href = '/login'
+        }}
+        onCancel={() => setShowLogout(false)}
+      />
     </div>
   )
 }

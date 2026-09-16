@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useProfileContext } from '@/lib/context/profile-context'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 const links = [
   { href: '/inicio', label: 'Inicio' },
@@ -21,6 +22,7 @@ const links = [
 
 export function Topbar() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [showLogout, setShowLogout] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const { firstName } = useProfileContext()
@@ -60,7 +62,7 @@ export function Topbar() {
             </Link>
           ))}
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogout(true)}
             className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-white w-full"
           >
             <LogOut size={16} />
@@ -68,6 +70,16 @@ export function Topbar() {
           </button>
         </nav>
       )}
+
+      <ConfirmDialog
+        open={showLogout}
+        title="Cerrar sesion"
+        message="¿Seguro que deseas cerrar tu sesion?"
+        confirmLabel="Cerrar sesion"
+        variant="warning"
+        onConfirm={handleLogout}
+        onCancel={() => setShowLogout(false)}
+      />
     </header>
   )
 }

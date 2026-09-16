@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, Trash2, Check, ArrowDownLeft, ArrowUpRight, CalendarDays } from 'lucide-react'
 import { useAccounts } from '@/lib/hooks/use-accounts'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
 import { format } from 'date-fns'
@@ -14,6 +15,7 @@ export default function CuentasPage() {
   const { toast } = useToast()
   const [showForm, setShowForm] = useState(false)
   const [filter, setFilter] = useState<'all' | 'receivable' | 'payable'>('all')
+  const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const [form, setForm] = useState({
     type: 'receivable' as AccountType,
@@ -53,11 +55,19 @@ export default function CuentasPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    const result = await deleteAccount(id)
+  function handleDelete(id: string) {
+    setDeleteId(id)
+  }
+
+  async function confirmDelete() {
+    if (!deleteId) return
+    const result = await deleteAccount(deleteId)
     if (result?.error) {
       toast('Error al eliminar', 'error')
+    } else {
+      toast('Cuenta eliminada', 'success')
     }
+    setDeleteId(null)
   }
 
   const filtered = accounts.filter((a) => {
@@ -263,6 +273,15 @@ export default function CuentasPage() {
           </div>
         ))}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteId}
+        title="Eliminar cuenta"
+        message="Esta accion no se puede deshacer. ¿Deseas continuar?"
+        confirmLabel="Eliminar"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   )
 }

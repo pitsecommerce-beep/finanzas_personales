@@ -16,14 +16,14 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-screen bg-primary text-white">
-      <header className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
+      <header className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 gap-3 max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold text-accent">FinanzApp</h1>
         <div className="flex gap-3">
           <Link
             href="/login"
             className="px-4 py-2 text-sm rounded-lg border border-white/20 hover:bg-white/5 transition"
           >
-            Iniciar sesión
+            Iniciar sesion
           </Link>
           <Link
             href="/registro"

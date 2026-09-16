@@ -6,19 +6,26 @@ import { useTransactions } from '@/lib/hooks/use-transactions'
 import { TransactionList } from '@/components/transactions/transaction-list'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import { Modal } from '@/components/ui/modal'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 
 export default function GastosPage() {
   const { transactions, loading, deleteTransaction, refetch } = useTransactions({ type: 'expense' })
   const [showForm, setShowForm] = useState(false)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const { toast } = useToast()
 
   async function handleDelete(id: string) {
-    if (!confirm('¿Eliminar este gasto?')) return
-    const { error } = await deleteTransaction(id)
+    setDeleteId(id)
+  }
+
+  async function confirmDelete() {
+    if (!deleteId) return
+    const { error } = await deleteTransaction(deleteId)
     if (error) toast('Error al eliminar', 'error')
     else toast('Gasto eliminado', 'success')
+    setDeleteId(null)
   }
 
   if (loading) {
@@ -46,6 +53,15 @@ export default function GastosPage() {
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Nuevo gasto">
         <TransactionForm type="expense" onSuccess={() => { setShowForm(false); refetch() }} />
       </Modal>
+
+      <ConfirmDialog
+        open={!!deleteId}
+        title="Eliminar gasto"
+        message="Esta accion no se puede deshacer. ¿Deseas continuar?"
+        confirmLabel="Eliminar"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   )
 }
