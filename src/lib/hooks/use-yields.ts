@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
+import { todayMX } from '@/lib/utils/dates'
 
 const YIELD_LIMIT = 25000
 
@@ -32,9 +33,8 @@ async function applyYields() {
 
   if (!cards?.length) return
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const todayStr = today.toISOString().split('T')[0]
+  const todayStr = todayMX()
+  const today = new Date(todayStr + 'T00:00:00')
 
   for (const card of cards) {
     const lastDate = card.last_yield_date

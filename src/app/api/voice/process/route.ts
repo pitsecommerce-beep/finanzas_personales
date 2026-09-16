@@ -1,5 +1,6 @@
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { todayMX } from '@/lib/utils/dates'
 
 const TOOLS = [
   {
@@ -110,7 +111,7 @@ async function executeTool(
   supabase: Awaited<ReturnType<typeof createClient>>,
   cards: Array<{ id: string; alias: string; card_type: string }>
 ) {
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayMX()
 
   switch (toolName) {
     case 'add_expense': {
@@ -275,7 +276,7 @@ REGLAS:
 - Si dice "gasto fijo" o "pago mensual" o "renta" o "servicio recurrente", usa add_fixed_expense
 - Si dice "me pagan" o "mi sueldo" o "nómina", usa add_income_source para ingresos fijos
 - Responde siempre en español, de forma breve y en texto plano (sin markdown, sin asteriscos, sin negritas)
-- La fecha de hoy es ${new Date().toISOString().split('T')[0]}
+- La fecha de hoy es ${todayMX()}
 
 TARJETAS DEL USUARIO:
 ${cardsContext || 'No tiene tarjetas registradas'}

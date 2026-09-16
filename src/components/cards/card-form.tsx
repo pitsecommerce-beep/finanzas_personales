@@ -9,6 +9,7 @@ import { BANKS, VOUCHER_BRANDS, INVESTMENT_PLATFORMS } from '@/lib/constants/ban
 import { CARD_COLORS } from '@/lib/constants/colors'
 import { useCards } from '@/lib/hooks/use-cards'
 import { useToast } from '@/components/ui/toast'
+import { todayMX } from '@/lib/utils/dates'
 import type { Card, CardType, YieldFrequency } from '@/types/database'
 
 interface CardFormProps {
@@ -34,7 +35,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
   const [investmentTicker, setInvestmentTicker] = useState(card?.investment_ticker ?? '')
   const [investmentShares, setInvestmentShares] = useState(card?.investment_shares?.toString() ?? '')
   const [investmentBuyPrice, setInvestmentBuyPrice] = useState(card?.investment_buy_price?.toString() ?? '')
-  const [investmentBuyDate, setInvestmentBuyDate] = useState(card?.investment_buy_date ?? new Date().toISOString().split('T')[0])
+  const [investmentBuyDate, setInvestmentBuyDate] = useState(card?.investment_buy_date ?? todayMX())
   const [loading, setLoading] = useState(false)
 
   const { addCard, updateCard } = useCards()
@@ -61,7 +62,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
       setInvestmentTicker(card.investment_ticker ?? '')
       setInvestmentShares(card.investment_shares?.toString() ?? '')
       setInvestmentBuyPrice(card.investment_buy_price?.toString() ?? '')
-      setInvestmentBuyDate(card.investment_buy_date ?? new Date().toISOString().split('T')[0])
+      setInvestmentBuyDate(card.investment_buy_date ?? todayMX())
     }
   }, [card])
 
@@ -69,7 +70,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
     e.preventDefault()
     setLoading(true)
 
-    const today = new Date().toISOString().split('T')[0]
+    const today = todayMX()
     const isSavings = cardType === 'savings'
     const isInvestment = cardType === 'investment'
     const hasBalance = cardType === 'debit' || cardType === 'cash' || isSavings || cardType === 'voucher' || isInvestment
