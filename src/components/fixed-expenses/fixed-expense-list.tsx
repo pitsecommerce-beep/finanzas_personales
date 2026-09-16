@@ -45,6 +45,11 @@ export function FixedExpenseList({ expenses, onEdit, onDelete }: FixedExpenseLis
                     }`}>
                       {isMsi ? 'MSI' : 'Mensual'}
                     </span>
+                    {exp.currency === 'USD' && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">
+                        USD · TC ${exp.exchange_rate?.toFixed(2)}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     {onEdit && (

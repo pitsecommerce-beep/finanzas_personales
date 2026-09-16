@@ -63,6 +63,8 @@ export interface FixedExpense {
   is_msi: boolean
   category: string
   status: FixedExpenseStatus
+  currency: string
+  exchange_rate: number | null
   created_at: string
   card?: Card
 }
