@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useToast } from '@/components/ui/toast'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Smartphone, Copy, Trash2, Plus, Check } from 'lucide-react'
 
 const GENDER_OPTIONS = [
   { value: 'male', label: 'Masculino' },
@@ -23,12 +23,16 @@ export default function ConfiguracionPage() {
   const [profileLoading, setProfileLoading] = useState(false)
 
   const [systemPrompt, setSystemPrompt] = useState('')
-  const [model, setModel] = useState('claude-sonnet-4-20250514')
+  const [model, setModel] = useState('claude-sonnet-4-6')
   const [aiOpen, setAiOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const [loadingData, setLoadingData] = useState(true)
   const [showLogout, setShowLogout] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [tokens, setTokens] = useState<Array<{ id: string; token: string; label: string; is_active: boolean; created_at: string }>>([])
+  const [tokensLoading, setTokensLoading] = useState(false)
+  const [copiedField, setCopiedField] = useState<string | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -87,6 +91,57 @@ export default function ConfiguracionPage() {
     setProfileLoading(false)
     toast(error ? 'Error al guardar perfil' : 'Perfil actualizado', error ? 'error' : 'success')
   }
+
+  async function loadTokens() {
+    setTokensLoading(true)
+    try {
+      const res = await fetch('/api/shortcuts/token')
+      const data = await res.json()
+      setTokens(data.tokens ?? [])
+    } catch {
+      toast('Error al cargar tokens', 'error')
+    }
+    setTokensLoading(false)
+  }
+
+  async function createToken() {
+    try {
+      const res = await fetch('/api/shortcuts/token', { method: 'POST' })
+      const data = await res.json()
+      if (data.token) {
+        setTokens(prev => [data.token, ...prev])
+        toast('Token creado', 'success')
+      } else {
+        toast(data.error || 'Error al crear token', 'error')
+      }
+    } catch {
+      toast('Error al crear token', 'error')
+    }
+  }
+
+  async function deleteToken(id: string) {
+    try {
+      await fetch('/api/shortcuts/token', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      setTokens(prev => prev.filter(t => t.id !== id))
+      toast('Token eliminado', 'success')
+    } catch {
+      toast('Error al eliminar', 'error')
+    }
+  }
+
+  function copyToClipboard(text: string, field: string) {
+    navigator.clipboard.writeText(text)
+    setCopiedField(field)
+    setTimeout(() => setCopiedField(null), 2000)
+  }
+
+  const apiUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/api/shortcuts/expense`
+    : ''
 
   async function handleSaveAI() {
     if (!isSupabaseConfigured()) { toast('BD no configurada', 'error'); return }
@@ -192,7 +247,7 @@ export default function ConfiguracionPage() {
                 onChange={(e) => setModel(e.target.value)}
                 className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
               >
-                <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+                <option value="claude-sonnet-4-6">Claude Sonnet 4</option>
                 <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
               </select>
             </div>
@@ -200,6 +255,118 @@ export default function ConfiguracionPage() {
             <Button onClick={handleSaveAI} loading={loading}>
               Guardar configuración
             </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-xl border border-border">
+        <button
+          type="button"
+          onClick={() => {
+            setShortcutsOpen(!shortcutsOpen)
+            if (!shortcutsOpen && tokens.length === 0) loadTokens()
+          }}
+          className="w-full flex items-center justify-between p-6"
+        >
+          <div className="text-left flex items-center gap-3">
+            <Smartphone size={20} className="text-accent" />
+            <div>
+              <h2 className="font-semibold">Apple Shortcuts</h2>
+              <p className="text-sm text-muted">Registra gastos desde tu iPhone de forma automática</p>
+            </div>
+          </div>
+          <ChevronDown
+            size={20}
+            className={`text-muted transition-transform ${shortcutsOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        {shortcutsOpen && (
+          <div className="px-6 pb-6 space-y-5 border-t border-border pt-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Tus tokens de acceso</p>
+                <Button size="sm" onClick={createToken}>
+                  <Plus size={14} /> Crear token
+                </Button>
+              </div>
+
+              {tokensLoading ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin h-5 w-5 border-2 border-accent border-t-transparent rounded-full" />
+                </div>
+              ) : tokens.length === 0 ? (
+                <p className="text-sm text-muted py-2">No tienes tokens. Crea uno para conectar Apple Shortcuts.</p>
+              ) : (
+                <div className="space-y-2">
+                  {tokens.map(t => (
+                    <div key={t.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                      <code className="text-xs flex-1 truncate text-foreground">{t.token}</code>
+                      <button
+                        onClick={() => copyToClipboard(t.token, t.id)}
+                        className="text-muted hover:text-accent p-1"
+                        title="Copiar token"
+                      >
+                        {copiedField === t.id ? <Check size={14} className="text-success" /> : <Copy size={14} />}
+                      </button>
+                      <button
+                        onClick={() => deleteToken(t.id)}
+                        className="text-muted hover:text-danger p-1"
+                        title="Eliminar token"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {tokens.length > 0 && (
+              <>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">URL del endpoint</p>
+                  <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                    <code className="text-xs flex-1 truncate text-foreground">{apiUrl}</code>
+                    <button
+                      onClick={() => copyToClipboard(apiUrl, 'url')}
+                      className="text-muted hover:text-accent p-1"
+                    >
+                      {copiedField === 'url' ? <Check size={14} className="text-success" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-3">
+                  <p className="text-sm font-semibold text-accent">Configurar en tu iPhone</p>
+                  <ol className="text-sm text-foreground space-y-2 list-decimal list-inside">
+                    <li>Abre la app <strong>Atajos</strong> en tu iPhone</li>
+                    <li>Ve a la pestaña <strong>Automatización</strong></li>
+                    <li>Toca <strong>+</strong> y busca <strong>&quot;Transacción&quot;</strong></li>
+                    <li>Selecciona <strong>&quot;Se completa una transacción con Apple Pay&quot;</strong></li>
+                    <li>En la accion, elige <strong>&quot;Obtener contenido de la URL&quot;</strong></li>
+                    <li>Pega la URL del endpoint (copiala arriba)</li>
+                    <li>Cambia el metodo a <strong>POST</strong></li>
+                    <li>En <strong>Encabezados</strong>, agrega:
+                      <br /><code className="text-xs bg-white px-1 py-0.5 rounded">Authorization</code> = <code className="text-xs bg-white px-1 py-0.5 rounded">Bearer TU_TOKEN</code>
+                    </li>
+                    <li>En <strong>Cuerpo</strong> elige JSON y agrega:
+                      <div className="bg-white rounded-lg p-2 mt-1 text-xs font-mono">
+                        {`{`}<br />
+                        &nbsp;&nbsp;{`"amount": `}<span className="text-accent">Monto de la transaccion</span>{`,`}<br />
+                        &nbsp;&nbsp;{`"merchant": `}<span className="text-accent">Nombre del comercio</span><br />
+                        {`}`}
+                      </div>
+                    </li>
+                    <li>Los campos <strong>Monto</strong> y <strong>Nombre del comercio</strong> son variables magicas que Atajos te ofrece al seleccionar la automatizacion de transaccion</li>
+                  </ol>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
+                  Cada gasto registrado se categoriza automaticamente con IA. Si necesitas ajustar la categoria, puedes editarlo desde la app.
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
