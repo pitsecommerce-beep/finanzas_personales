@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, subMonths } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, subMonths, addDays, addMonths, isBefore, isAfter } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { clampDay, toNextBusinessDay } from '@/lib/utils/dates'
@@ -60,11 +60,20 @@ export default function CalendarioPage() {
     })
 
     incomeSources.forEach((src) => {
-      if (src.next_payment_date) {
-        const payDate = new Date(src.next_payment_date)
-        if (isSameDay(payDate, day)) {
+      if (!src.next_payment_date) return
+      const baseDate = new Date(src.next_payment_date + 'T12:00:00')
+      const stepDays = src.frequency === 'weekly' ? 7 : src.frequency === 'biweekly' ? 15 : 0
+      const advance = stepDays > 0
+        ? (d: Date, dir: number) => addDays(d, stepDays * dir)
+        : (d: Date, dir: number) => addMonths(d, dir)
+
+      let d = baseDate
+      while (isAfter(d, monthStart)) d = advance(d, -1)
+      while (!isAfter(d, monthEnd)) {
+        if (!isBefore(d, monthStart) && isSameDay(d, day)) {
           events.push({ label: src.description, color: '#10B981', type: 'income' })
         }
+        d = advance(d, 1)
       }
     })
 

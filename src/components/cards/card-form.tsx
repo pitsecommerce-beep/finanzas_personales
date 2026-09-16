@@ -321,7 +321,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
               onClick={() => setColor(c.value)}
               className={`w-8 h-8 rounded-full border-2 transition-transform ${
                 color === c.value ? 'border-accent scale-110' : 'border-transparent'
-              } ${c.value === '#F8FAFC' ? 'ring-1 ring-gray-200' : ''}`}
+              } ${c.value === '#F5F0E8' ? 'ring-1 ring-gray-200' : ''}`}
               style={{ backgroundColor: c.value }}
               title={c.label}
             />
