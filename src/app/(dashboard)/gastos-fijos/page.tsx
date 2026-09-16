@@ -20,8 +20,16 @@ export default function GastosFijosPage() {
 
   const activeExpenses = expenses.filter((e) => e.status === 'active')
   const totalMonthly = activeExpenses.reduce((sum, e) => {
-    const remaining = getRemainingMonths(e.start_date, e.total_months)
-    return sum + (remaining > 0 ? Number(e.monthly_amount) : 0)
+    const isMsi = e.is_msi !== false && e.total_months > 1
+    if (isMsi) {
+      const remaining = getRemainingMonths(e.start_date, e.total_months)
+      return sum + (remaining > 0 ? Number(e.monthly_amount) : 0)
+    }
+    const now = new Date()
+    const start = new Date(e.start_date)
+    if (start > now) return sum
+    if (e.end_date && new Date(e.end_date) < now) return sum
+    return sum + Number(e.monthly_amount)
   }, 0)
 
   async function handleDelete(id: string) {

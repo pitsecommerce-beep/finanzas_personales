@@ -64,11 +64,11 @@ export default function ReportesPage() {
   }, [period])
 
   const income = transactions
-    .filter((t) => t.type === 'income')
+    .filter((t) => t.type === 'income' && !t.is_transfer)
     .reduce((sum, t) => sum + Number(t.amount), 0)
 
   const expenses = transactions
-    .filter((t) => t.type === 'expense')
+    .filter((t) => t.type === 'expense' && !t.is_transfer)
     .reduce((sum, t) => sum + Number(t.amount), 0)
 
   const monthlyData = (() => {
@@ -83,6 +83,7 @@ export default function ReportesPage() {
       }
     }
     allTransactions.forEach((t) => {
+      if (t.is_transfer) return
       const key = t.date.slice(0, 7)
       if (months[key]) {
         if (t.type === 'income') months[key].ingresos += Number(t.amount)
