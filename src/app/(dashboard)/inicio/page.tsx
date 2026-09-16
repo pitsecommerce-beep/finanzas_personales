@@ -5,6 +5,7 @@ import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { useProfileContext } from '@/lib/context/profile-context'
 import { useYields } from '@/lib/hooks/use-yields'
 import { QuickEntry } from '@/components/dashboard/quick-entry'
+import { VoiceEntry } from '@/components/dashboard/voice-entry'
 import { SummaryCards } from '@/components/dashboard/summary-cards'
 import { SpendingChart } from '@/components/dashboard/spending-chart'
 import { UpcomingPayments } from '@/components/dashboard/upcoming-payments'
@@ -75,6 +76,8 @@ export default function InicioPage() {
       </div>
 
       <QuickEntry />
+
+      <VoiceEntry />
 
       <SummaryCards income={income} expenses={expenses} cards={cards} />
 
