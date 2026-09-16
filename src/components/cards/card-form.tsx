@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { Select } from '@/components/ui/select'
-import { BANKS, VOUCHER_BRANDS } from '@/lib/constants/banks'
+import { BANKS, VOUCHER_BRANDS, INVESTMENT_PLATFORMS } from '@/lib/constants/banks'
 import { CARD_COLORS } from '@/lib/constants/colors'
 import { useCards } from '@/lib/hooks/use-cards'
 import { useToast } from '@/components/ui/toast'
@@ -30,6 +30,11 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
   const [yieldFrequency, setYieldFrequency] = useState<YieldFrequency>(card?.yield_frequency ?? 'daily')
   const [moneyAvailability, setMoneyAvailability] = useState(card?.money_availability ?? 'immediate')
   const [color, setColor] = useState(card?.color ?? '#14B8A6')
+  const [investmentPlatform, setInvestmentPlatform] = useState(card?.investment_platform ?? '')
+  const [investmentTicker, setInvestmentTicker] = useState(card?.investment_ticker ?? '')
+  const [investmentShares, setInvestmentShares] = useState(card?.investment_shares?.toString() ?? '')
+  const [investmentBuyPrice, setInvestmentBuyPrice] = useState(card?.investment_buy_price?.toString() ?? '')
+  const [investmentBuyDate, setInvestmentBuyDate] = useState(card?.investment_buy_date ?? new Date().toISOString().split('T')[0])
   const [loading, setLoading] = useState(false)
 
   const { addCard, updateCard } = useCards()
@@ -52,6 +57,11 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
       setYieldFrequency(card.yield_frequency ?? 'daily')
       setMoneyAvailability(card.money_availability ?? 'immediate')
       setColor(card.color)
+      setInvestmentPlatform(card.investment_platform ?? '')
+      setInvestmentTicker(card.investment_ticker ?? '')
+      setInvestmentShares(card.investment_shares?.toString() ?? '')
+      setInvestmentBuyPrice(card.investment_buy_price?.toString() ?? '')
+      setInvestmentBuyDate(card.investment_buy_date ?? new Date().toISOString().split('T')[0])
     }
   }, [card])
 
@@ -61,7 +71,8 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
 
     const today = new Date().toISOString().split('T')[0]
     const isSavings = cardType === 'savings'
-    const hasBalance = cardType === 'debit' || cardType === 'cash' || isSavings || cardType === 'voucher'
+    const isInvestment = cardType === 'investment'
+    const hasBalance = cardType === 'debit' || cardType === 'cash' || isSavings || cardType === 'voucher' || isInvestment
 
     const cardData: Record<string, unknown> = {
       bank_name: cardType === 'cash' ? 'Efectivo' : bankName,
@@ -96,6 +107,22 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
       cardData.yield_rate_above_limit = null
     }
 
+    if (isInvestment) {
+      cardData.investment_platform = investmentPlatform || null
+      cardData.investment_ticker = investmentTicker.toUpperCase() || null
+      cardData.investment_shares = investmentShares ? parseFloat(investmentShares) : null
+      cardData.investment_buy_price = investmentBuyPrice ? parseFloat(investmentBuyPrice) : null
+      cardData.investment_buy_date = investmentBuyDate || null
+      cardData.bank_name = investmentPlatform || 'Inversión'
+      cardData.alias = alias || `${investmentTicker.toUpperCase()} - ${investmentPlatform}`
+    } else {
+      cardData.investment_platform = null
+      cardData.investment_ticker = null
+      cardData.investment_shares = null
+      cardData.investment_buy_price = null
+      cardData.investment_buy_date = null
+    }
+
     let result
     if (isEditing) {
       result = await updateCard(card.id, cardData)
@@ -120,11 +147,12 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
     { value: 'savings', label: 'Ahorro' },
     { value: 'cash', label: 'Efectivo' },
     { value: 'voucher', label: 'Vales' },
+    { value: 'investment', label: 'Inversión' },
   ]
 
-  const showBank = cardType !== 'cash' && cardType !== 'voucher'
-  const showDigits = cardType !== 'cash' && cardType !== 'voucher'
-  const showBalance = cardType === 'debit' || cardType === 'cash' || cardType === 'savings' || cardType === 'voucher'
+  const showBank = cardType !== 'cash' && cardType !== 'voucher' && cardType !== 'investment'
+  const showDigits = cardType !== 'cash' && cardType !== 'voucher' && cardType !== 'investment'
+  const showBalance = cardType === 'debit' || cardType === 'cash' || cardType === 'savings' || cardType === 'voucher' || cardType === 'investment'
   const balanceNum = balance ? parseFloat(balance) : 0
 
   const yieldFreqOptions = [
@@ -307,6 +335,63 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
             Regulación mexicana: los rendimientos garantizados aplican hasta $25,000 MXN. El excedente genera una tasa menor.
+          </div>
+        </>
+      )}
+
+      {cardType === 'investment' && (
+        <>
+          <Select
+            id="investPlatform"
+            label="Plataforma"
+            value={investmentPlatform}
+            onChange={(e) => setInvestmentPlatform(e.target.value)}
+            options={INVESTMENT_PLATFORMS.map((p) => ({ value: p, label: p }))}
+            placeholder="Selecciona"
+            required
+          />
+
+          <Input
+            id="investTicker"
+            label="Ticker / Símbolo"
+            value={investmentTicker}
+            onChange={(e) => setInvestmentTicker(e.target.value.toUpperCase())}
+            placeholder="Ej: AAPL, BTC-USD, NAFTRAC"
+            required
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              id="investShares"
+              label="Cantidad de títulos"
+              type="number"
+              step="0.000001"
+              min="0"
+              value={investmentShares}
+              onChange={(e) => setInvestmentShares(e.target.value)}
+              placeholder="Ej: 10"
+              required
+            />
+            <CurrencyInput
+              id="investBuyPrice"
+              label="Precio de compra (unit.)"
+              value={investmentBuyPrice}
+              onChange={setInvestmentBuyPrice}
+              placeholder="150.00"
+            />
+          </div>
+
+          <Input
+            id="investBuyDate"
+            label="Fecha de compra"
+            type="date"
+            value={investmentBuyDate}
+            onChange={(e) => setInvestmentBuyDate(e.target.value)}
+            required
+          />
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
+            Se consultará el precio actual del ticker para calcular tus ganancias o pérdidas.
           </div>
         </>
       )}

@@ -66,9 +66,13 @@ export default function TarjetasPage() {
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
           {cards.map((card) => (
-            <div key={card.id} onClick={() => router.push(`/tarjetas/${card.id}`)} className="cursor-pointer">
-              <CardItem card={card} onEdit={handleEdit} onDelete={(id) => setDeleteId(id)} />
-            </div>
+            <CardItem
+              key={card.id}
+              card={card}
+              onView={(c) => router.push(`/tarjetas/${c.id}`)}
+              onEdit={handleEdit}
+              onDelete={(id) => setDeleteId(id)}
+            />
           ))}
         </div>
       )}

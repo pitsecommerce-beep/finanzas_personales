@@ -9,6 +9,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ArrowLeft, CalendarDays } from 'lucide-react'
 import { TransactionList } from '@/components/transactions/transaction-list'
+import { InvestmentDetail } from '@/components/cards/investment-detail'
 import type { Card, Transaction, FixedExpense } from '@/types/database'
 
 export default function CardDetailPage() {
@@ -75,6 +76,8 @@ export default function CardDetailPage() {
         <p className="text-xl font-bold">{card.alias}</p>
         {card.last_four_digits && <p className="text-sm font-mono mt-1 opacity-60">**** {card.last_four_digits}</p>}
       </div>
+
+      {card.card_type === 'investment' && <InvestmentDetail card={card} />}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {card.balance != null && (
