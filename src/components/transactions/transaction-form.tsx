@@ -92,7 +92,7 @@ export function TransactionForm({ type, onSuccess }: TransactionFormProps) {
         label="Descripción"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="¿En qué gastaste?"
+        placeholder={type === 'expense' ? '¿En qué gastaste?' : '¿De dónde proviene?'}
         required
       />
 

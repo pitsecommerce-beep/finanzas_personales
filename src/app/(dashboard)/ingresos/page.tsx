@@ -8,6 +8,7 @@ import { TransactionList } from '@/components/transactions/transaction-list'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import { IncomeForm } from '@/components/income/income-form'
 import { Modal } from '@/components/ui/modal'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
@@ -23,7 +24,19 @@ export default function IngresosPage() {
   const { transactions, loading: txLoading, deleteTransaction, refetch: refetchTx } = useTransactions({ type: 'income' })
   const [showIncomeForm, setShowIncomeForm] = useState(false)
   const [showTxForm, setShowTxForm] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; kind: 'source' | 'tx' } | null>(null)
   const { toast } = useToast()
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    if (deleteTarget.kind === 'source') {
+      await deleteSource(deleteTarget.id)
+    } else {
+      await deleteTransaction(deleteTarget.id)
+    }
+    toast('Eliminado', 'success')
+    setDeleteTarget(null)
+  }
 
   const loading = sourcesLoading || txLoading
 
@@ -64,11 +77,7 @@ export default function IngresosPage() {
                 </div>
                 <p className="font-semibold text-success text-sm">{formatMXN(s.amount)}</p>
                 <button
-                  onClick={async () => {
-                    if (!confirm('¿Eliminar?')) return
-                    await deleteSource(s.id)
-                    toast('Eliminado', 'success')
-                  }}
+                  onClick={() => setDeleteTarget({ id: s.id, kind: 'source' })}
                   className="text-muted hover:text-danger p-1"
                 >
                   <Trash2 size={14} />
@@ -83,11 +92,7 @@ export default function IngresosPage() {
         <h2 className="font-semibold text-sm mb-3">Historial de ingresos</h2>
         <TransactionList
           transactions={transactions}
-          onDelete={async (id) => {
-            if (!confirm('¿Eliminar?')) return
-            await deleteTransaction(id)
-            toast('Eliminado', 'success')
-          }}
+          onDelete={(id) => setDeleteTarget({ id, kind: 'tx' })}
         />
       </div>
 
@@ -98,6 +103,15 @@ export default function IngresosPage() {
       <Modal open={showTxForm} onClose={() => setShowTxForm(false)} title="Registrar ingreso">
         <TransactionForm type="income" onSuccess={() => { setShowTxForm(false); refetchTx() }} />
       </Modal>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Eliminar registro"
+        message="Esta accion no se puede deshacer. ¿Deseas continuar?"
+        confirmLabel="Eliminar"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

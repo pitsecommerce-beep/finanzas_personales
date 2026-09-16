@@ -2,21 +2,31 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 export default function RegistroPage() {
+  const [fullName, setFullName] = useState('')
+  const [age, setAge] = useState('')
+  const [gender, setGender] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+
+    if (!fullName.trim()) {
+      setError('Tu nombre es obligatorio')
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('Las contraseñas no coinciden')
@@ -30,20 +40,51 @@ export default function RegistroPage() {
 
     setLoading(true)
     const supabase = createClient()
-    const { error: authError } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          full_name: fullName.trim(),
+          age: age ? parseInt(age) : null,
+          gender: gender || null,
+        },
+      },
     })
-
-    setLoading(false)
 
     if (authError) {
       setError(authError.message)
+      setLoading(false)
       return
     }
 
+    if (authData.user) {
+      await supabase.from('profiles').upsert({
+        user_id: authData.user.id,
+        full_name: fullName.trim(),
+        age: age ? parseInt(age) : null,
+        gender: gender || null,
+      }, { onConflict: 'user_id' })
+    }
+
+    setLoading(false)
     setSuccess(true)
   }
+
+  async function handleGoogleLogin() {
+    const supabase = createClient()
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/callback` },
+    })
+  }
+
+  const genderOptions = [
+    { value: 'male', label: 'Masculino' },
+    { value: 'female', label: 'Femenino' },
+    { value: 'other', label: 'Otro' },
+    { value: 'prefer_not_to_say', label: 'Prefiero no decir' },
+  ]
 
   if (success) {
     return (
@@ -58,14 +99,6 @@ export default function RegistroPage() {
         </Link>
       </div>
     )
-  }
-
-  async function handleGoogleLogin() {
-    const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/callback` },
-    })
   }
 
   return (
@@ -97,6 +130,46 @@ export default function RegistroPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          id="full_name"
+          label="Nombre completo"
+          labelClassName="text-gray-300"
+          type="text"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          placeholder="Tu nombre"
+          required
+          className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+        />
+
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            id="age"
+            label="Edad"
+            labelClassName="text-gray-300"
+            type="number"
+            value={age}
+            onChange={(e) => setAge(e.target.value)}
+            placeholder="Opcional"
+            min="1"
+            max="120"
+            className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+          />
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-300">Género</label>
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="w-full rounded-lg border bg-white/10 border-white/20 text-white px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+            >
+              <option value="" className="bg-secondary">Opcional</option>
+              {genderOptions.map((opt) => (
+                <option key={opt.value} value={opt.value} className="bg-secondary">{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <Input
           id="email"
           label="Correo electrónico"

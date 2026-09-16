@@ -4,6 +4,19 @@ CREATE TYPE transaction_type AS ENUM ('expense', 'income');
 CREATE TYPE frequency_type AS ENUM ('weekly', 'biweekly', 'monthly');
 CREATE TYPE fixed_expense_status AS ENUM ('active', 'completed', 'cancelled');
 
+-- Profiles
+CREATE TYPE gender_type AS ENUM ('male', 'female', 'other', 'prefer_not_to_say');
+
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name TEXT NOT NULL,
+  age INTEGER CHECK (age > 0 AND age < 150),
+  gender gender_type,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Cards
 CREATE TABLE cards (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -97,8 +110,10 @@ CREATE INDEX idx_fixed_expenses_user ON fixed_expenses(user_id);
 CREATE INDEX idx_fixed_expenses_card ON fixed_expenses(card_id);
 CREATE INDEX idx_income_sources_user ON income_sources(user_id);
 CREATE INDEX idx_accounts_user ON accounts(user_id);
+CREATE INDEX idx_profiles_user ON profiles(user_id);
 
 -- RLS
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fixed_expenses ENABLE ROW LEVEL SECURITY;
@@ -106,6 +121,7 @@ ALTER TABLE income_sources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_config ENABLE ROW LEVEL SECURITY;
 
+CREATE POLICY "Users can manage their own profile" ON profiles FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can manage their own cards" ON cards FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can manage their own transactions" ON transactions FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can manage their own fixed expenses" ON fixed_expenses FOR ALL USING (auth.uid() = user_id);

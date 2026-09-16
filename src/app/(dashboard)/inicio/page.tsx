@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
+import { useProfileContext } from '@/lib/context/profile-context'
 import { QuickEntry } from '@/components/dashboard/quick-entry'
 import { SummaryCards } from '@/components/dashboard/summary-cards'
 import { SpendingChart } from '@/components/dashboard/spending-chart'
@@ -13,6 +14,7 @@ export default function InicioPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [cards, setCards] = useState<Card[]>([])
   const [loading, setLoading] = useState(true)
+  const { firstName } = useProfileContext()
 
   useEffect(() => {
     async function load() {
@@ -64,7 +66,9 @@ export default function InicioPage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold">Inicio</h1>
+        <h1 className="text-2xl font-bold">
+          {firstName ? `Hola, ${firstName}` : 'Inicio'}
+        </h1>
         <p className="text-sm text-muted">Resumen de este mes</p>
       </div>
 

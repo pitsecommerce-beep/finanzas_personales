@@ -5,6 +5,8 @@ import { Menu, X, LogOut } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useProfileContext } from '@/lib/context/profile-context'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 const links = [
   { href: '/inicio', label: 'Inicio' },
@@ -20,8 +22,10 @@ const links = [
 
 export function Topbar() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [showLogout, setShowLogout] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+  const { firstName } = useProfileContext()
 
   async function handleLogout() {
     const supabase = createClient()
@@ -32,7 +36,10 @@ export function Topbar() {
   return (
     <header className="lg:hidden bg-primary text-white">
       <div className="flex items-center justify-between px-4 py-3">
-        <h1 className="text-lg font-bold text-accent">FinanzApp</h1>
+        <div>
+          <h1 className="text-lg font-bold text-accent">FinanzApp</h1>
+          {firstName && <p className="text-[10px] text-gray-400 -mt-0.5">Hola, {firstName}</p>}
+        </div>
         <button onClick={() => setMenuOpen(!menuOpen)} className="p-1">
           {menuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -55,7 +62,7 @@ export function Topbar() {
             </Link>
           ))}
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogout(true)}
             className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-white w-full"
           >
             <LogOut size={16} />
@@ -63,6 +70,16 @@ export function Topbar() {
           </button>
         </nav>
       )}
+
+      <ConfirmDialog
+        open={showLogout}
+        title="Cerrar sesion"
+        message="¿Seguro que deseas cerrar tu sesion?"
+        confirmLabel="Cerrar sesion"
+        variant="warning"
+        onConfirm={handleLogout}
+        onCancel={() => setShowLogout(false)}
+      />
     </header>
   )
 }
