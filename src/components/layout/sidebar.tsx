@@ -50,20 +50,20 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 bg-primary text-white min-h-screen">
+    <aside className="hidden lg:flex flex-col w-64 bg-primary text-white h-screen sticky top-0">
       <div className="p-6">
         <div className="flex items-center gap-2">
           <img src="/favicon_nummo.png" alt="Nummo" className="h-8 w-8 rounded-lg" />
           <h1 className="text-xl font-bold text-accent">Nummo</h1>
         </div>
         {firstName ? (
-          <p className="text-xs text-gray-400 mt-1">Hola, {firstName}</p>
+          <p className="text-base font-semibold text-white mt-2">Hola, {firstName}</p>
         ) : (
           <p className="text-xs text-gray-400 mt-1">Control financiero inteligente</p>
         )}
       </div>
 
-      <nav className="flex-1 px-3 space-y-1">
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto scrollbar-none">
         {links.map((link) => {
           const isActive = pathname.startsWith(link.href)
           return (

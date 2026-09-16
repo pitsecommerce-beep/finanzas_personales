@@ -6,12 +6,13 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay,
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { clampDay, toNextBusinessDay } from '@/lib/utils/dates'
-import type { Card, IncomeSource } from '@/types/database'
+import type { Card, IncomeSource, Account } from '@/types/database'
 
 export default function CalendarioPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [cards, setCards] = useState<Card[]>([])
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
 
   useEffect(() => {
     async function load() {
@@ -21,12 +22,14 @@ export default function CalendarioPage() {
       }
       try {
         const supabase = createClient()
-        const [c, i] = await Promise.all([
+        const [c, i, a] = await Promise.all([
           supabase.from('cards').select('*'),
           supabase.from('income_sources').select('*'),
+          supabase.from('accounts').select('*').eq('is_paid', false),
         ])
         setCards(c.data ?? [])
         setIncomeSources(i.data ?? [])
+        setAccounts(a.data ?? [])
       } catch (err) {
         console.warn('[Nummo] Error al cargar calendario:', err)
       }
@@ -74,6 +77,16 @@ export default function CalendarioPage() {
           events.push({ label: src.description, color: '#10B981', type: 'income' })
         }
         d = advance(d, 1)
+      }
+    })
+
+    accounts.forEach((acc) => {
+      if (!acc.due_date) return
+      const dueDate = new Date(acc.due_date + 'T12:00:00')
+      if (isSameDay(dueDate, day)) {
+        const color = acc.type === 'payable' ? '#EF4444' : '#10B981'
+        const prefix = acc.type === 'payable' ? 'Pagar' : 'Cobrar'
+        events.push({ label: `${prefix}: ${acc.person_name}`, color, type: 'account' })
       }
     })
 
@@ -153,18 +166,18 @@ export default function CalendarioPage() {
         </div>
       </div>
 
-      <div className="flex gap-4 text-xs text-muted">
+      <div className="flex flex-wrap gap-4 text-xs text-muted">
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-full bg-warning" />
           <span>Fecha de corte</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-full bg-danger" />
-          <span>Fecha de pago</span>
+          <span>Pago / Por pagar</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-full bg-success" />
-          <span>Ingreso</span>
+          <span>Ingreso / Por cobrar</span>
         </div>
       </div>
     </div>

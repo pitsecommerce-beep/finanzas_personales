@@ -87,32 +87,42 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
     transaction: Record<string, unknown>
   ) {
     if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return { data: null, error: { message: 'No autenticado' } }
 
-    const { data, error } = await supabase
-      .from('transactions')
-      .insert({ ...transaction, user_id: user.id })
-      .select('*, card:cards(*)')
-      .single()
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert({ ...transaction, user_id: user.id })
+        .select('*, card:cards(*)')
+        .single()
 
-    if (!error && data) {
-      const amount = transaction.amount as number
-      const isTransfer = transaction.is_transfer as boolean
-      if (isTransfer) {
-        const fromId = transaction.transfer_from_card_id as string | null
-        const toId = transaction.transfer_to_card_id as string | null
-        if (fromId) await updateCardBalance(fromId, amount, 'expense')
-        if (toId) await updateCardBalance(toId, amount, 'income')
-      } else {
-        const cardId = transaction.card_id as string | null
-        const type = transaction.type as 'expense' | 'income'
-        if (cardId) await updateCardBalance(cardId, amount, type)
+      if (error) {
+        console.error('[Nummo] Error al insertar transaccion:', error.message, error.details, error.hint)
+        return { data: null, error }
       }
-      setTransactions((prev) => [data, ...prev])
+
+      if (data) {
+        const amount = transaction.amount as number
+        const isTransfer = transaction.is_transfer as boolean
+        if (isTransfer) {
+          const fromId = transaction.transfer_from_card_id as string | null
+          const toId = transaction.transfer_to_card_id as string | null
+          if (fromId) await updateCardBalance(fromId, amount, 'expense')
+          if (toId) await updateCardBalance(toId, amount, 'income')
+        } else {
+          const cardId = transaction.card_id as string | null
+          const type = transaction.type as 'expense' | 'income'
+          if (cardId) await updateCardBalance(cardId, amount, type)
+        }
+        setTransactions((prev) => [data, ...prev])
+      }
+      return { data, error: null }
+    } catch (err) {
+      console.error('[Nummo] Error inesperado al crear transaccion:', err)
+      return { data: null, error: { message: String(err) } }
     }
-    return { data, error }
   }
 
   async function deleteTransaction(id: string) {

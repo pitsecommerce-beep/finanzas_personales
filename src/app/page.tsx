@@ -21,7 +21,7 @@ export default async function LandingPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) redirect('/inicio')
     } catch {
-      console.warn('[Nummo] No se pudo verificar sesion en landing')
+      console.warn('[Nummo] No se pudo verificar sesión en landing')
     }
   }
 
@@ -29,12 +29,12 @@ export default async function LandingPage() {
     {
       icon: CreditCard,
       title: 'Tarjetas',
-      desc: 'Gestiona credito, debito, ahorro, efectivo y vales de despensa en un solo lugar.',
+      desc: 'Gestiona crédito, débito, ahorro, efectivo y vales de despensa en un solo lugar.',
     },
     {
       icon: BarChart3,
       title: 'Dashboard',
-      desc: 'Visualiza gastos por categoria, liquidez disponible y tendencias mensuales.',
+      desc: 'Visualiza gastos por categoría, liquidez disponible y tendencias mensuales.',
     },
     {
       icon: MessageCircle,
@@ -44,7 +44,7 @@ export default async function LandingPage() {
     {
       icon: Shield,
       title: 'Seguro',
-      desc: 'Tus datos estan protegidos con cifrado y politicas de acceso estrictas.',
+      desc: 'Tus datos están protegidos con cifrado y políticas de acceso estrictas.',
     },
   ]
 
@@ -52,17 +52,17 @@ export default async function LandingPage() {
     {
       icon: PiggyBank,
       title: 'Metas de ahorro',
-      desc: 'Define cuanto ahorrar cada mes y Nummo te avisa si gastas ese dinero.',
+      desc: 'Define cuánto ahorrar cada mes y Nummo te avisa si gastas ese dinero.',
     },
     {
       icon: ArrowLeftRight,
       title: 'Traspasos',
-      desc: 'Mueve dinero entre cuentas y registra pagos a tarjetas de credito.',
+      desc: 'Mueve dinero entre cuentas y registra pagos a tarjetas de crédito.',
     },
     {
       icon: TrendingUp,
       title: 'Rendimientos',
-      desc: 'Calcula rendimientos de cuentas de ahorro con tasa dual (limite regulatorio de $25,000).',
+      desc: 'Calcula rendimientos de cuentas de ahorro con tasa dual (límite regulatorio de $25,000).',
     },
     {
       icon: Wallet,
@@ -77,7 +77,7 @@ export default async function LandingPage() {
     {
       icon: FileSpreadsheet,
       title: 'Estado de resultados',
-      desc: 'Genera tu P&L por mes, semestre o ano y descargalo en Excel.',
+      desc: 'Genera tu P&L por mes, semestre o año y descárgalo en Excel.',
     },
   ]
 
@@ -93,7 +93,7 @@ export default async function LandingPage() {
             href="/login"
             className="px-4 py-2 text-sm rounded-lg border border-white/20 hover:bg-white/5 transition"
           >
-            Iniciar sesion
+            Iniciar sesión
           </Link>
           <Link
             href="/registro"
@@ -134,7 +134,7 @@ export default async function LandingPage() {
         </section>
 
         <section className="py-16">
-          <h2 className="text-2xl font-bold text-center mb-3">¿Que es Nummo?</h2>
+          <h2 className="text-2xl font-bold text-center mb-3">¿Qué es Nummo?</h2>
           <p className="text-center text-gray-400 max-w-xl mx-auto mb-12">
             Nummo es tu asistente financiero personal. Centraliza tus cuentas, controla tus
             gastos y toma mejores decisiones con datos claros y un asesor con inteligencia artificial.
@@ -188,7 +188,7 @@ export default async function LandingPage() {
 
         <section className="py-16 text-center">
           <h2 className="text-3xl font-bold mb-4">Empieza a controlar tu dinero</h2>
-          <p className="text-gray-400 mb-8">Sin costo, sin tarjeta de credito, sin complicaciones.</p>
+          <p className="text-gray-400 mb-8">Sin costo, sin tarjeta de crédito, sin complicaciones.</p>
           <Link
             href="/registro"
             className="inline-block px-8 py-3 bg-accent text-white rounded-xl text-lg font-medium hover:bg-accent-hover transition"
@@ -204,7 +204,7 @@ export default async function LandingPage() {
             <p className="text-sm text-gray-500">My Nummo by Orkesta Labs</p>
             <nav className="flex gap-6 text-sm text-gray-400">
               <Link href="/aviso-privacidad" className="hover:text-white transition">Aviso de privacidad</Link>
-              <Link href="/terminos" className="hover:text-white transition">Terminos y condiciones</Link>
+              <Link href="/terminos" className="hover:text-white transition">Términos y condiciones</Link>
               <Link href="/contacto" className="hover:text-white transition">Contacto</Link>
             </nav>
           </div>

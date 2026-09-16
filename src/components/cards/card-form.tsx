@@ -241,7 +241,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
           </div>
           <CurrencyInput
             id="creditLimit"
-            label="Limite de credito"
+            label="Límite de crédito"
             value={creditLimit}
             onChange={setCreditLimit}
             placeholder="50,000"
