@@ -143,7 +143,7 @@ export default function ConfiguracionPage() {
           />
           <Select
             id="gender"
-            label="Genero"
+            label="Género"
             value={gender}
             onChange={(e) => setGender(e.target.value)}
             options={GENDER_OPTIONS}
@@ -214,9 +214,9 @@ export default function ConfiguracionPage() {
 
       <ConfirmDialog
         open={showLogout}
-        title="Cerrar sesion"
-        message="¿Seguro que deseas cerrar tu sesion?"
-        confirmLabel="Cerrar sesion"
+        title="Cerrar sesión"
+        message="¿Seguro que deseas cerrar tu sesión?"
+        confirmLabel="Cerrar sesión"
         variant="warning"
         onConfirm={async () => {
           const supabase = createClient()

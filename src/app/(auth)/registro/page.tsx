@@ -153,7 +153,7 @@ export default function RegistroPage() {
             className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
           />
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-300">Genero</label>
+            <label className="block text-sm font-medium text-gray-300">Género</label>
             <select
               value={gender}
               onChange={(e) => setGender(e.target.value)}

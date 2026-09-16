@@ -82,7 +82,7 @@ export default function TarjetasPage() {
       <ConfirmDialog
         open={!!deleteId}
         title="Eliminar tarjeta"
-        message="Esta accion no se puede deshacer. ¿Deseas continuar?"
+        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}

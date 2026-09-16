@@ -76,9 +76,9 @@ export function Topbar() {
 
       <ConfirmDialog
         open={showLogout}
-        title="Cerrar sesion"
-        message="¿Seguro que deseas cerrar tu sesion?"
-        confirmLabel="Cerrar sesion"
+        title="Cerrar sesión"
+        message="¿Seguro que deseas cerrar tu sesión?"
+        confirmLabel="Cerrar sesión"
         variant="warning"
         onConfirm={handleLogout}
         onCancel={() => setShowLogout(false)}
