@@ -1,13 +1,14 @@
 'use client'
 
 import type { Card } from '@/types/database'
-import { CreditCard, Wallet, Banknote, Trash2, Pencil, PiggyBank, Ticket } from 'lucide-react'
+import { CreditCard, Wallet, Banknote, Trash2, Pencil, PiggyBank, Ticket, TrendingUp, Eye } from 'lucide-react'
 import { formatMXN } from '@/lib/utils/currency'
 
 interface CardItemProps {
   card: Card
   onEdit?: (card: Card) => void
   onDelete?: (id: string) => void
+  onView?: (card: Card) => void
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -16,6 +17,7 @@ const TYPE_LABELS: Record<string, string> = {
   cash: 'Efectivo',
   savings: 'Ahorro',
   voucher: 'Vales',
+  investment: 'Inversión',
 }
 
 function getIcon(type: string) {
@@ -24,11 +26,12 @@ function getIcon(type: string) {
     case 'debit': return Wallet
     case 'savings': return PiggyBank
     case 'voucher': return Ticket
+    case 'investment': return TrendingUp
     default: return CreditCard
   }
 }
 
-export function CardItem({ card, onEdit, onDelete }: CardItemProps) {
+export function CardItem({ card, onEdit, onDelete, onView }: CardItemProps) {
   const Icon = getIcon(card.card_type)
   const isLight = card.color === '#F5F0E8'
   const textClass = isLight ? 'text-gray-800' : 'text-white'
@@ -59,13 +62,18 @@ export function CardItem({ card, onEdit, onDelete }: CardItemProps) {
           <span className={`text-[10px] ${badgeBg} px-2 py-0.5 rounded-full uppercase font-medium`}>
             {TYPE_LABELS[card.card_type] ?? card.card_type}
           </span>
+          {onView && (
+            <button onClick={(e) => { e.stopPropagation(); onView(card) }} className={`${btnClass} p-1`} title="Ver movimientos">
+              <Eye size={14} />
+            </button>
+          )}
           {onEdit && (
-            <button onClick={() => onEdit(card)} className={`${btnClass} p-1`}>
+            <button onClick={(e) => { e.stopPropagation(); onEdit(card) }} className={`${btnClass} p-1`} title="Editar">
               <Pencil size={14} />
             </button>
           )}
           {onDelete && (
-            <button onClick={() => onDelete(card.id)} className={`${btnClass} p-1`}>
+            <button onClick={(e) => { e.stopPropagation(); onDelete(card.id) }} className={`${btnClass} p-1`} title="Eliminar">
               <Trash2 size={14} />
             </button>
           )}
@@ -73,7 +81,7 @@ export function CardItem({ card, onEdit, onDelete }: CardItemProps) {
       </div>
 
       <div className="relative">
-        {(card.card_type === 'cash' || card.card_type === 'voucher') ? (
+        {(card.card_type === 'cash' || card.card_type === 'voucher' || card.card_type === 'investment') ? (
           <div />
         ) : (
           <p className={`text-lg tracking-widest font-mono ${dotClass}`}>
@@ -112,6 +120,18 @@ export function CardItem({ card, onEdit, onDelete }: CardItemProps) {
             <div>
               <p className={subtextClass}>Rendimiento</p>
               <p className="font-medium">{card.yield_rate}% anual</p>
+            </div>
+          )}
+          {card.card_type === 'investment' && card.investment_ticker && (
+            <div>
+              <p className={subtextClass}>Ticker</p>
+              <p className="font-medium">{card.investment_ticker}</p>
+            </div>
+          )}
+          {card.card_type === 'investment' && card.investment_shares != null && (
+            <div>
+              <p className={subtextClass}>Acciones</p>
+              <p className="font-medium">{card.investment_shares}</p>
             </div>
           )}
         </div>

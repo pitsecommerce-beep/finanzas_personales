@@ -31,3 +31,16 @@ export const VOUCHER_BRANDS = [
   'Up Sí Vale',
   'Otro',
 ] as const
+
+export const INVESTMENT_PLATFORMS = [
+  'GBM+',
+  'Bitso',
+  'CETES Directo',
+  'Kuspit',
+  'Bursanet',
+  'eToro',
+  'Interactive Brokers',
+  'Flink',
+  'Dinn',
+  'Otro',
+] as const

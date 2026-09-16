@@ -1,4 +1,4 @@
-export type CardType = 'credit' | 'debit' | 'cash' | 'savings' | 'voucher'
+export type CardType = 'credit' | 'debit' | 'cash' | 'savings' | 'voucher' | 'investment'
 export type TransactionType = 'expense' | 'income'
 export type FrequencyType = 'weekly' | 'biweekly' | 'monthly'
 export type FixedExpenseStatus = 'active' | 'completed' | 'cancelled'
@@ -24,6 +24,11 @@ export interface Card {
   money_availability: string | null
   last_yield_date: string | null
   color: string
+  investment_platform: string | null
+  investment_ticker: string | null
+  investment_shares: number | null
+  investment_buy_price: number | null
+  investment_buy_date: string | null
   created_at: string
   updated_at: string
 }
