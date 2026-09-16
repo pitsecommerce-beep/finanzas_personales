@@ -41,7 +41,7 @@ export default function ReportesPage() {
         const [filtered, all, cardRes] = await Promise.all([
           supabase
             .from('transactions')
-            .select('*, card:cards(*)')
+            .select('*, card:cards!transactions_card_id_fkey(*)')
             .gte('date', startDate)
             .order('date', { ascending: false }),
           supabase

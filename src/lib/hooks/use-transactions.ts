@@ -26,7 +26,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       const supabase = createClient()
       let query = supabase
         .from('transactions')
-        .select('*, card:cards(*)')
+        .select('*, card:cards!transactions_card_id_fkey(*)')
         .order('date', { ascending: false })
 
       if (options.type) query = query.eq('type', options.type)
@@ -95,7 +95,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       const { data, error } = await supabase
         .from('transactions')
         .insert({ ...transaction, user_id: user.id })
-        .select('*, card:cards(*)')
+        .select('*, card:cards!transactions_card_id_fkey(*)')
         .single()
 
       if (error) {
@@ -149,7 +149,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       .from('transactions')
       .update(updates)
       .eq('id', id)
-      .select('*, card:cards(*)')
+      .select('*, card:cards!transactions_card_id_fkey(*)')
       .single()
 
     if (!error && data) {

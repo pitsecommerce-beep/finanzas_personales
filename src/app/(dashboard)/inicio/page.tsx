@@ -33,7 +33,7 @@ export default function InicioPage() {
         const [txRes, cardRes] = await Promise.all([
           supabase
             .from('transactions')
-            .select('*, card:cards(*)')
+            .select('*, card:cards!transactions_card_id_fkey(*)')
             .gte('date', startOfMonth)
             .order('date', { ascending: false }),
           supabase.from('cards').select('*').order('created_at', { ascending: false }),
