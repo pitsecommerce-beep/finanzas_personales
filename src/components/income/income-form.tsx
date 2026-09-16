@@ -3,34 +3,53 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
+import { CardSelector } from '@/components/cards/card-selector'
+import { useCards } from '@/lib/hooks/use-cards'
 import { useIncome } from '@/lib/hooks/use-income'
 import { useToast } from '@/components/ui/toast'
-import type { FrequencyType } from '@/types/database'
+import { INCOME_TYPES } from '@/lib/constants/categories'
+import type { FrequencyType, IncomeType } from '@/types/database'
 
 interface IncomeFormProps {
+  source?: { id: string; description: string; amount: number; frequency: FrequencyType; income_type?: IncomeType; card_id?: string | null; next_payment_date?: string | null }
   onSuccess?: () => void
 }
 
-export function IncomeForm({ onSuccess }: IncomeFormProps) {
-  const [description, setDescription] = useState('')
-  const [amount, setAmount] = useState('')
-  const [frequency, setFrequency] = useState<FrequencyType>('monthly')
-  const [nextDate, setNextDate] = useState('')
+export function IncomeForm({ source, onSuccess }: IncomeFormProps) {
+  const [description, setDescription] = useState(source?.description ?? '')
+  const [amount, setAmount] = useState(source?.amount?.toString() ?? '')
+  const [frequency, setFrequency] = useState<FrequencyType>(source?.frequency ?? 'monthly')
+  const [incomeType, setIncomeType] = useState<IncomeType>((source?.income_type as IncomeType) ?? 'other')
+  const [cardId, setCardId] = useState<string | null>(source?.card_id ?? null)
+  const [nextDate, setNextDate] = useState(source?.next_payment_date ?? '')
   const [loading, setLoading] = useState(false)
 
-  const { addSource } = useIncome()
+  const { cards } = useCards()
+  const { addSource, updateSource } = useIncome()
   const { toast } = useToast()
+
+  const isEditing = !!source
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
 
-    const result = await addSource({
+    const data = {
       description,
       amount: parseFloat(amount),
       frequency,
+      income_type: incomeType,
+      card_id: cardId,
       next_payment_date: nextDate || null,
-    })
+    }
+
+    let result
+    if (isEditing) {
+      result = await updateSource(source.id, data)
+    } else {
+      result = await addSource(data)
+    }
 
     setLoading(false)
 
@@ -39,7 +58,7 @@ export function IncomeForm({ onSuccess }: IncomeFormProps) {
       return
     }
 
-    toast('Fuente de ingreso agregada', 'success')
+    toast(isEditing ? 'Fuente actualizada' : 'Fuente de ingreso agregada', 'success')
     onSuccess?.()
   }
 
@@ -58,6 +77,14 @@ export function IncomeForm({ onSuccess }: IncomeFormProps) {
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Ej: Nómina, Freelance"
         required
+      />
+
+      <Select
+        id="incomeType"
+        label="Tipo de ingreso"
+        value={incomeType}
+        onChange={(e) => setIncomeType(e.target.value as IncomeType)}
+        options={INCOME_TYPES.map(t => ({ value: t.value, label: t.label }))}
       />
 
       <div>
@@ -96,6 +123,14 @@ export function IncomeForm({ onSuccess }: IncomeFormProps) {
         </div>
       </div>
 
+      <CardSelector
+        cards={cards}
+        value={cardId}
+        onChange={setCardId}
+        label="Cuenta destino"
+        filterTypes={['debit', 'savings', 'cash', 'voucher']}
+      />
+
       <Input
         id="nextDate"
         label="Próximo pago"
@@ -105,7 +140,7 @@ export function IncomeForm({ onSuccess }: IncomeFormProps) {
       />
 
       <Button type="submit" loading={loading} className="w-full" size="lg">
-        Agregar fuente de ingreso
+        {isEditing ? 'Guardar cambios' : 'Agregar fuente de ingreso'}
       </Button>
     </form>
   )

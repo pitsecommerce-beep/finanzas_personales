@@ -48,6 +48,11 @@ export function TransactionForm({ type, onSuccess }: TransactionFormProps) {
       installment_months: installmentMonths ? parseInt(installmentMonths) : null,
       installment_current: installmentMonths ? 1 : null,
       notes: null,
+      is_transfer: false,
+      transfer_from_card_id: null,
+      transfer_to_card_id: null,
+      currency: 'MXN',
+      exchange_rate: null,
     })
 
     setLoading(false)

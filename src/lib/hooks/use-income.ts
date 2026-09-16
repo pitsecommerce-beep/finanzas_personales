@@ -19,7 +19,7 @@ export function useIncome() {
       const supabase = createClient()
       const { data } = await supabase
         .from('income_sources')
-        .select('*')
+        .select('*, card:cards(*)')
         .order('created_at', { ascending: false })
       setSources(data ?? [])
     } catch (err) {
@@ -32,28 +32,50 @@ export function useIncome() {
     fetchSources()
   }, [fetchSources])
 
-  async function addSource(source: Omit<IncomeSource, 'id' | 'user_id' | 'created_at'>) {
+  async function addSource(source: Record<string, unknown>) {
     if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
 
+    const nextDate = source.next_payment_date as string | null
     const adjustedSource = {
       ...source,
       user_id: user.id,
-      next_payment_date: source.next_payment_date
-        ? adjustDateToBusinessDay(source.next_payment_date)
-        : null,
+      next_payment_date: nextDate ? adjustDateToBusinessDay(nextDate) : null,
     }
 
     const { data, error } = await supabase
       .from('income_sources')
       .insert(adjustedSource)
-      .select()
+      .select('*, card:cards(*)')
       .single()
 
     if (!error && data) {
       setSources((prev) => [data, ...prev])
+    }
+    return { data, error }
+  }
+
+  async function updateSource(id: string, updates: Record<string, unknown>) {
+    if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
+    const supabase = createClient()
+
+    const nextDate = updates.next_payment_date as string | null
+    const adjusted = {
+      ...updates,
+      next_payment_date: nextDate ? adjustDateToBusinessDay(nextDate) : null,
+    }
+
+    const { data, error } = await supabase
+      .from('income_sources')
+      .update(adjusted)
+      .eq('id', id)
+      .select('*, card:cards(*)')
+      .single()
+
+    if (!error && data) {
+      setSources((prev) => prev.map((s) => (s.id === id ? data : s)))
     }
     return { data, error }
   }
@@ -68,5 +90,5 @@ export function useIncome() {
     return { error }
   }
 
-  return { sources, loading, addSource, deleteSource, refetch: fetchSources }
+  return { sources, loading, addSource, updateSource, deleteSource, refetch: fetchSources }
 }

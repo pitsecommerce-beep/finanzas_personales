@@ -69,7 +69,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
   }
 
   async function addTransaction(
-    transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'card'>
+    transaction: Record<string, unknown>
   ) {
     if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
     const supabase = createClient()
@@ -83,8 +83,11 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       .single()
 
     if (!error && data) {
-      if (transaction.card_id) {
-        await updateCardBalance(transaction.card_id, transaction.amount, transaction.type)
+      const cardId = transaction.card_id as string | null
+      const amount = transaction.amount as number
+      const type = transaction.type as 'expense' | 'income'
+      if (cardId) {
+        await updateCardBalance(cardId, amount, type)
       }
       setTransactions((prev) => [data, ...prev])
     }
