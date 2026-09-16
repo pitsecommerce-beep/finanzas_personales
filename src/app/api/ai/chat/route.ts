@@ -82,7 +82,7 @@ DATOS FINANCIEROS DEL USUARIO:
     method: 'POST',
     headers,
     body: JSON.stringify({
-      model: configRes.data?.model ?? 'claude-sonnet-4-20250514',
+      model: configRes.data?.model ?? 'claude-sonnet-4-6',
       max_tokens: 1024,
       system: `${systemPrompt}\n\n${financialContext}`,
       messages: messages.map((m: any) => ({
