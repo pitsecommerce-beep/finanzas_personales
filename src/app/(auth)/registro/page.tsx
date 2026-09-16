@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 
 export default function RegistroPage() {
   const [fullName, setFullName] = useState('')
-  const [age, setAge] = useState('')
+  const [birthDate, setBirthDate] = useState('')
   const [gender, setGender] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -46,7 +46,7 @@ export default function RegistroPage() {
       options: {
         data: {
           full_name: fullName.trim(),
-          age: age ? parseInt(age) : null,
+          birth_date: birthDate || null,
           gender: gender || null,
         },
       },
@@ -62,7 +62,7 @@ export default function RegistroPage() {
       await supabase.from('profiles').upsert({
         user_id: authData.user.id,
         full_name: fullName.trim(),
-        age: age ? parseInt(age) : null,
+        birth_date: birthDate || null,
         gender: gender || null,
       }, { onConflict: 'user_id' })
     }
@@ -144,19 +144,16 @@ export default function RegistroPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <Input
-            id="age"
-            label="Edad"
+            id="birth_date"
+            label="Fecha de nacimiento"
             labelClassName="text-gray-300"
-            type="number"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            placeholder="Opcional"
-            min="1"
-            max="120"
+            type="date"
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
             className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
           />
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-300">Género</label>
+            <label className="block text-sm font-medium text-gray-300">Genero</label>
             <select
               value={gender}
               onChange={(e) => setGender(e.target.value)}

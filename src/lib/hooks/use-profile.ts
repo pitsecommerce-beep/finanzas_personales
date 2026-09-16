@@ -35,7 +35,7 @@ export function useProfile() {
     fetchProfile()
   }, [fetchProfile])
 
-  async function saveProfile(profileData: { full_name: string; age: number | null; gender: string | null }) {
+  async function saveProfile(profileData: { full_name: string; birth_date: string | null; gender: string | null }) {
     if (!isSupabaseConfigured()) return { error: { message: 'BD no configurada' } }
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -46,7 +46,7 @@ export function useProfile() {
       .upsert({
         user_id: user.id,
         full_name: profileData.full_name,
-        age: profileData.age,
+        birth_date: profileData.birth_date,
         gender: profileData.gender,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })

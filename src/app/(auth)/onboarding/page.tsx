@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 
 export default function OnboardingPage() {
   const [fullName, setFullName] = useState('')
-  const [age, setAge] = useState('')
+  const [birthDate, setBirthDate] = useState('')
   const [gender, setGender] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -29,7 +29,7 @@ export default function OnboardingPage() {
       .upsert({
         user_id: user.id,
         full_name: fullName.trim(),
-        age: age ? parseInt(age) : null,
+        birth_date: birthDate || null,
         gender: gender || null,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })
@@ -77,15 +77,12 @@ export default function OnboardingPage() {
         />
 
         <Input
-          id="age"
-          label="Edad"
+          id="birth_date"
+          label="Fecha de nacimiento"
           labelClassName="text-gray-300"
-          type="number"
-          value={age}
-          onChange={(e) => setAge(e.target.value)}
-          placeholder="Opcional"
-          min="1"
-          max="120"
+          type="date"
+          value={birthDate}
+          onChange={(e) => setBirthDate(e.target.value)}
           className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
         />
 
