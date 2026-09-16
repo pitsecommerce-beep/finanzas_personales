@@ -50,7 +50,7 @@ export function Sidebar() {
     <aside className="hidden lg:flex flex-col w-64 bg-primary text-white min-h-screen">
       <div className="p-6">
         <div className="flex items-center gap-2">
-          <img src="/logo.svg" alt="Nummo" className="h-8 w-8 rounded-lg" />
+          <img src="/favicon_nummo.png" alt="Nummo" className="h-8 w-8 rounded-lg" />
           <h1 className="text-xl font-bold text-accent">Nummo</h1>
         </div>
         {firstName ? (

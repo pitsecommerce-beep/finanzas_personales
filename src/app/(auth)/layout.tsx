@@ -6,7 +6,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="text-3xl font-bold text-accent hover:text-accent-hover transition">
-            <img src="/logo.svg" alt="Nummo" className="h-12 mx-auto mb-2" />
+            <img src="/favicon_nummo.png" alt="Nummo" className="h-12 mx-auto mb-2" />
             Nummo
           </Link>
           <p className="text-gray-400 mt-2 text-sm">Control financiero inteligente</p>
