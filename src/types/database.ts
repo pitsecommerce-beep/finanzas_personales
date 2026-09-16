@@ -80,7 +80,7 @@ export interface Profile {
   id: string
   user_id: string
   full_name: string
-  age: number | null
+  birth_date: string | null
   gender: GenderType | null
   created_at: string
   updated_at: string
