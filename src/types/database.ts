@@ -1,4 +1,4 @@
-export type CardType = 'credit' | 'debit'
+export type CardType = 'credit' | 'debit' | 'cash'
 export type TransactionType = 'expense' | 'income'
 export type FrequencyType = 'weekly' | 'biweekly' | 'monthly'
 export type FixedExpenseStatus = 'active' | 'completed' | 'cancelled'
@@ -13,6 +13,7 @@ export interface Card {
   cut_off_day: number | null
   payment_day: number | null
   credit_limit: number | null
+  balance: number | null
   color: string
   created_at: string
   updated_at: string

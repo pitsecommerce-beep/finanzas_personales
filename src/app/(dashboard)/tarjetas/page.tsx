@@ -47,8 +47,8 @@ export default function TarjetasPage() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Tarjetas</h1>
-          <p className="text-sm text-muted">{cards.length} tarjetas registradas</p>
+          <h1 className="text-2xl font-bold">Tarjetas y efectivo</h1>
+          <p className="text-sm text-muted">{cards.length} registros</p>
         </div>
         <Button onClick={() => setShowForm(true)} size="sm">
           <Plus size={16} /> Agregar
@@ -58,8 +58,8 @@ export default function TarjetasPage() {
       {cards.length === 0 ? (
         <div className="text-center py-16 text-muted">
           <p className="text-4xl mb-3">💳</p>
-          <p className="text-sm mb-4">Agrega tu primera tarjeta</p>
-          <Button onClick={() => setShowForm(true)}>Agregar tarjeta</Button>
+          <p className="text-sm mb-4">Agrega tu primera tarjeta o registro de efectivo</p>
+          <Button onClick={() => setShowForm(true)}>Agregar</Button>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">

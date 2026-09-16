@@ -23,6 +23,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
   const [cutOffDay, setCutOffDay] = useState(card?.cut_off_day?.toString() ?? '')
   const [paymentDay, setPaymentDay] = useState(card?.payment_day?.toString() ?? '')
   const [creditLimit, setCreditLimit] = useState(card?.credit_limit?.toString() ?? '')
+  const [balance, setBalance] = useState(card?.balance?.toString() ?? '')
   const [color, setColor] = useState(card?.color ?? '#14B8A6')
   const [loading, setLoading] = useState(false)
 
@@ -40,6 +41,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
       setCutOffDay(card.cut_off_day?.toString() ?? '')
       setPaymentDay(card.payment_day?.toString() ?? '')
       setCreditLimit(card.credit_limit?.toString() ?? '')
+      setBalance(card.balance?.toString() ?? '')
       setColor(card.color)
     }
   }, [card])
@@ -49,13 +51,14 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
     setLoading(true)
 
     const cardData = {
-      bank_name: bankName,
-      alias,
+      bank_name: cardType === 'cash' ? 'Efectivo' : bankName,
+      alias: cardType === 'cash' && !alias ? 'Dinero en efectivo' : alias,
       card_type: cardType,
-      last_four_digits: lastFour || null,
+      last_four_digits: cardType === 'cash' ? null : (lastFour || null),
       cut_off_day: cardType === 'credit' ? parseInt(cutOffDay) : null,
       payment_day: cardType === 'credit' ? parseInt(paymentDay) : null,
-      credit_limit: creditLimit ? parseFloat(creditLimit) : null,
+      credit_limit: cardType === 'credit' && creditLimit ? parseFloat(creditLimit) : null,
+      balance: (cardType === 'debit' || cardType === 'cash') && balance ? parseFloat(balance) : null,
       color,
     }
 
@@ -69,63 +72,73 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
     setLoading(false)
 
     if (result?.error) {
-      toast(`Error al ${isEditing ? 'actualizar' : 'guardar'} la tarjeta`, 'error')
+      toast(`Error al ${isEditing ? 'actualizar' : 'guardar'}`, 'error')
       return
     }
 
-    toast(isEditing ? 'Tarjeta actualizada' : 'Tarjeta agregada', 'success')
+    toast(isEditing ? 'Actualizado' : 'Agregado', 'success')
     onSuccess?.()
   }
 
+  const typeOptions: { value: CardType; label: string }[] = [
+    { value: 'credit', label: 'Crédito' },
+    { value: 'debit', label: 'Débito' },
+    { value: 'cash', label: 'Efectivo' },
+  ]
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Select
-        id="bank"
-        label="Banco"
-        value={bankName}
-        onChange={(e) => setBankName(e.target.value)}
-        options={BANKS.map((b) => ({ value: b, label: b }))}
-        placeholder="Selecciona un banco"
-        required
-      />
+      <div className="space-y-1">
+        <label className="block text-sm font-medium text-foreground">Tipo<span className="ml-0.5">*</span></label>
+        <div className="flex gap-2">
+          {typeOptions.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => setCardType(t.value)}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                cardType === t.value
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-border text-muted hover:border-gray-300'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {cardType !== 'cash' && (
+        <Select
+          id="bank"
+          label="Banco"
+          value={bankName}
+          onChange={(e) => setBankName(e.target.value)}
+          options={BANKS.map((b) => ({ value: b, label: b }))}
+          placeholder="Selecciona un banco"
+          required
+        />
+      )}
 
       <Input
         id="alias"
         label="Alias"
         value={alias}
         onChange={(e) => setAlias(e.target.value)}
-        placeholder="Ej: Mi Oro BBVA"
-        required
+        placeholder={cardType === 'cash' ? 'Ej: Mi cartera' : 'Ej: Mi Oro BBVA'}
+        required={cardType !== 'cash'}
       />
 
-      <div className="space-y-1">
-        <label className="block text-sm font-medium text-foreground">Tipo de tarjeta<span className="ml-0.5">*</span></label>
-        <div className="flex gap-2">
-          {(['credit', 'debit'] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setCardType(t)}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                cardType === t
-                  ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-border text-muted hover:border-gray-300'
-              }`}
-            >
-              {t === 'credit' ? 'Crédito' : 'Débito'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <Input
-        id="lastFour"
-        label="Últimos 4 dígitos"
-        value={lastFour}
-        onChange={(e) => setLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))}
-        placeholder="1234"
-        maxLength={4}
-      />
+      {cardType !== 'cash' && (
+        <Input
+          id="lastFour"
+          label="Últimos 4 dígitos"
+          value={lastFour}
+          onChange={(e) => setLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))}
+          placeholder="1234"
+          maxLength={4}
+        />
+      )}
 
       {cardType === 'credit' && (
         <>
@@ -164,6 +177,18 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
         </>
       )}
 
+      {(cardType === 'debit' || cardType === 'cash') && (
+        <Input
+          id="balance"
+          label="Saldo actual"
+          type="number"
+          step="0.01"
+          value={balance}
+          onChange={(e) => setBalance(e.target.value)}
+          placeholder="0.00"
+        />
+      )}
+
       <div className="space-y-1">
         <label className="block text-sm font-medium text-foreground">Color</label>
         <div className="flex gap-2 flex-wrap">
@@ -183,7 +208,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
       </div>
 
       <Button type="submit" loading={loading} className="w-full" size="lg">
-        {isEditing ? 'Guardar cambios' : 'Agregar tarjeta'}
+        {isEditing ? 'Guardar cambios' : 'Agregar'}
       </Button>
     </form>
   )
