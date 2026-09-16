@@ -57,7 +57,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
     const yieldsEnabled = cardType === 'debit' && hasYields
     const today = new Date().toISOString().split('T')[0]
 
-    const cardData = {
+    const cardData: Record<string, unknown> = {
       bank_name: cardType === 'cash' ? 'Efectivo' : bankName,
       alias: cardType === 'cash' && !alias ? 'Dinero en efectivo' : alias,
       card_type: cardType,
@@ -67,9 +67,16 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
       credit_limit: cardType === 'credit' && creditLimit ? parseFloat(creditLimit) : null,
       balance: (cardType === 'debit' || cardType === 'cash') && balance ? parseFloat(balance) : null,
       color,
-      has_yields: yieldsEnabled,
-      yield_rate: yieldsEnabled && yieldRate ? parseFloat(yieldRate) : null,
-      last_yield_date: yieldsEnabled ? (card?.last_yield_date ?? today) : null,
+    }
+
+    if (yieldsEnabled) {
+      cardData.has_yields = true
+      cardData.yield_rate = yieldRate ? parseFloat(yieldRate) : null
+      cardData.last_yield_date = card?.last_yield_date ?? today
+    } else if (cardType === 'debit') {
+      cardData.has_yields = false
+      cardData.yield_rate = null
+      cardData.last_yield_date = null
     }
 
     let result

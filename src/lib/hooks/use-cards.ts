@@ -31,7 +31,7 @@ export function useCards() {
     fetchCards()
   }, [fetchCards])
 
-  async function addCard(card: Omit<Card, 'id' | 'user_id' | 'created_at' | 'updated_at'>) {
+  async function addCard(card: Record<string, unknown>) {
     if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
