@@ -274,7 +274,7 @@ REGLAS:
 - Si dice "le debo" o "tengo que pagar", es cuenta por pagar (payable)
 - Si dice "gasto fijo" o "pago mensual" o "renta" o "servicio recurrente", usa add_fixed_expense
 - Si dice "me pagan" o "mi sueldo" o "nómina", usa add_income_source para ingresos fijos
-- Responde siempre en español, de forma breve
+- Responde siempre en español, de forma breve y en texto plano (sin markdown, sin asteriscos, sin negritas)
 - La fecha de hoy es ${new Date().toISOString().split('T')[0]}
 
 TARJETAS DEL USUARIO:
