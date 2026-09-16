@@ -3,41 +3,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { formatMXN } from '@/lib/utils/currency'
-import { format, subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, getDaysInMonth, differenceInDays, addDays, addMonths, isBefore, isAfter } from 'date-fns'
+import { format, startOfMonth, endOfMonth, addMonths, addDays, isBefore, isAfter, isSameMonth } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Download, TrendingUp, TrendingDown } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { Transaction, FixedExpense, IncomeSource } from '@/types/database'
+import type { Transaction, FixedExpense, IncomeSource, Card, Account } from '@/types/database'
 
 type Period = 'month' | 'semester' | 'year'
-
-interface PylRow {
-  category: string
-  income: number
-  expense: number
-}
-
-const CATEGORY_LABELS: Record<string, string> = {
-  nomina: 'Nómina',
-  freelance: 'Freelance',
-  rendimientos: 'Rendimientos',
-  renta: 'Renta',
-  venta: 'Venta',
-  regalo: 'Regalo',
-  otros_ingresos: 'Otros ingresos',
-  comida: 'Comida',
-  transporte: 'Transporte',
-  entretenimiento: 'Entretenimiento',
-  salud: 'Salud',
-  educacion: 'Educación',
-  ropa: 'Ropa',
-  servicios: 'Servicios',
-  hogar: 'Hogar',
-  mascotas: 'Mascotas',
-  viajes: 'Viajes',
-  suscripciones: 'Suscripciones',
-  otros: 'Otros',
-}
 
 function getMonthlyIncomeAmount(src: IncomeSource): number {
   if (src.frequency === 'weekly') return src.amount * 4
@@ -45,8 +17,10 @@ function getMonthlyIncomeAmount(src: IncomeSource): number {
   return src.amount
 }
 
-function countOccurrencesInRange(src: IncomeSource, start: Date, end: Date): number {
+function countOccurrencesInMonth(src: IncomeSource, monthDate: Date): number {
   if (!src.next_payment_date) return 0
+  const mStart = startOfMonth(monthDate)
+  const mEnd = endOfMonth(monthDate)
   const baseDate = new Date(src.next_payment_date + 'T12:00:00')
   const stepDays = src.frequency === 'weekly' ? 7 : src.frequency === 'biweekly' ? 15 : 0
   const advance = stepDays > 0
@@ -54,156 +28,227 @@ function countOccurrencesInRange(src: IncomeSource, start: Date, end: Date): num
     : (d: Date, dir: number) => addMonths(d, dir)
 
   let d = baseDate
-  while (isAfter(d, start)) d = advance(d, -1)
-
+  while (isAfter(d, mStart)) d = advance(d, -1)
   let count = 0
-  while (!isAfter(d, end)) {
-    if (!isBefore(d, start)) count++
+  while (!isAfter(d, mEnd)) {
+    if (!isBefore(d, mStart)) count++
     d = advance(d, 1)
   }
   return count
+}
+
+function getMonthColumns(period: Period): Date[] {
+  const now = new Date()
+  if (period === 'month') return [startOfMonth(now)]
+  const count = period === 'semester' ? 6 : 12
+  const months: Date[] = []
+  for (let i = 0; i < count; i++) {
+    months.push(startOfMonth(addMonths(now, i)))
+  }
+  return months
+}
+
+function fmtShort(n: number): string {
+  if (Math.abs(n) >= 1000000) return `$${(n / 1000000).toFixed(1)}M`
+  if (Math.abs(n) >= 1000) return `$${(n / 1000).toFixed(1)}k`
+  return formatMXN(n)
+}
+
+interface MonthData {
+  fixedIncome: { description: string; amount: number }[]
+  sporadicIncome: { category: string; amount: number }[]
+  receivables: { person: string; amount: number }[]
+  fixedExpenses: { description: string; amount: number }[]
+  sporadicExpenses: { category: string; amount: number }[]
+  payables: { person: string; amount: number }[]
+  totalIncome: number
+  totalExpense: number
+  net: number
+  cardProjections: { card: Card; projected: number }[]
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  nomina: 'Nómina', freelance: 'Freelance', rendimientos: 'Rendimientos',
+  renta: 'Renta', venta: 'Venta', regalo: 'Regalo', otros_ingresos: 'Otros ingresos',
+  comida: 'Comida', transporte: 'Transporte', entretenimiento: 'Entretenimiento',
+  salud: 'Salud', educacion: 'Educación', ropa: 'Ropa', servicios: 'Servicios',
+  hogar: 'Hogar', mascotas: 'Mascotas', viajes: 'Viajes', suscripciones: 'Suscripciones',
+  otros: 'Otros',
 }
 
 export default function PylPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([])
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([])
+  const [cards, setCards] = useState<Card[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
   const [period, setPeriod] = useState<Period>('month')
   const [loading, setLoading] = useState(true)
-
-  const getDateRange = useCallback(() => {
-    const now = new Date()
-    if (period === 'month') {
-      return { start: startOfMonth(now), end: endOfMonth(now) }
-    } else if (period === 'semester') {
-      return { start: startOfMonth(subMonths(now, 5)), end: endOfMonth(now) }
-    }
-    return { start: startOfYear(now), end: endOfYear(now) }
-  }, [period])
 
   useEffect(() => {
     async function load() {
       if (!isSupabaseConfigured()) { setLoading(false); return }
       try {
         const supabase = createClient()
-        const { start, end } = getDateRange()
-        const [txRes, feRes, isRes] = await Promise.all([
-          supabase
-            .from('transactions')
-            .select('*')
-            .gte('date', format(start, 'yyyy-MM-dd'))
-            .lte('date', format(end, 'yyyy-MM-dd'))
+        const months = getMonthColumns(period)
+        const rangeStart = months[0]
+        const rangeEnd = endOfMonth(months[months.length - 1])
+
+        const [txRes, feRes, isRes, cRes, aRes] = await Promise.all([
+          supabase.from('transactions').select('*')
+            .gte('date', format(rangeStart, 'yyyy-MM-dd'))
+            .lte('date', format(rangeEnd, 'yyyy-MM-dd'))
             .eq('is_transfer', false)
             .order('date', { ascending: false }),
-          supabase
-            .from('fixed_expenses')
-            .select('*')
-            .eq('status', 'active'),
-          supabase
-            .from('income_sources')
-            .select('*'),
+          supabase.from('fixed_expenses').select('*').eq('status', 'active'),
+          supabase.from('income_sources').select('*'),
+          supabase.from('cards').select('*'),
+          supabase.from('accounts').select('*').eq('is_paid', false),
         ])
         setTransactions(txRes.data ?? [])
         setFixedExpenses(feRes.data ?? [])
         setIncomeSources(isRes.data ?? [])
+        setCards(cRes.data ?? [])
+        setAccounts(aRes.data ?? [])
       } catch (err) {
         console.warn('[Nummo] Error al cargar P&L:', err)
       }
       setLoading(false)
     }
     load()
-  }, [period, getDateRange])
+  }, [period])
 
-  const { start: rangeStart, end: rangeEnd } = getDateRange()
-
-  const incomeRows: PylRow[] = []
-  const expenseRows: PylRow[] = []
-
-  const grouped: Record<string, { income: number; expense: number }> = {}
-  transactions.forEach((t) => {
-    const cat = t.category || 'otros'
-    if (!grouped[cat]) grouped[cat] = { income: 0, expense: 0 }
-    if (t.type === 'income') grouped[cat].income += Number(t.amount)
-    else grouped[cat].expense += Number(t.amount)
-  })
-
-  Object.entries(grouped).forEach(([cat, vals]) => {
-    const label = CATEGORY_LABELS[cat] || cat
-    if (vals.income > 0) incomeRows.push({ category: label, income: vals.income, expense: 0 })
-    if (vals.expense > 0) expenseRows.push({ category: label, income: 0, expense: vals.expense })
-  })
-
-  incomeRows.sort((a, b) => b.income - a.income)
-  expenseRows.sort((a, b) => b.expense - a.expense)
-
-  const totalIncome = incomeRows.reduce((s, r) => s + r.income, 0)
-  const totalExpense = expenseRows.reduce((s, r) => s + r.expense, 0)
-  const netResult = totalIncome - totalExpense
-
+  const months = getMonthColumns(period)
+  const isMultiMonth = months.length > 1
   const now = new Date()
-  const isCurrentMonth = period === 'month'
-  const monthEnd = endOfMonth(now)
-  const daysLeft = differenceInDays(monthEnd, now)
-  const totalDaysInMonth = getDaysInMonth(now)
 
-  const projectedFixedExpenses = fixedExpenses.reduce((sum, fe) => sum + Number(fe.monthly_amount), 0)
+  function buildMonthData(monthDate: Date): MonthData {
+    const mStart = startOfMonth(monthDate)
+    const mEnd = endOfMonth(monthDate)
+    const isCurrent = isSameMonth(monthDate, now)
+    const isFuture = isAfter(mStart, now)
 
-  const projectedIncome = incomeSources.reduce((sum, src) => {
-    if (isCurrentMonth) {
-      const occurrences = countOccurrencesInRange(src, startOfMonth(now), monthEnd)
-      return sum + (src.amount * occurrences)
+    const monthTx = transactions.filter(t => {
+      const d = new Date(t.date + 'T12:00:00')
+      return !isBefore(d, mStart) && !isAfter(d, mEnd)
+    })
+
+    const fixedIncome = incomeSources.map(src => {
+      const occ = countOccurrencesInMonth(src, monthDate)
+      return { description: src.description, amount: src.amount * occ }
+    }).filter(r => r.amount > 0)
+
+    const incomeByCategory: Record<string, number> = {}
+    monthTx.filter(t => t.type === 'income').forEach(t => {
+      const cat = t.category || 'otros'
+      incomeByCategory[cat] = (incomeByCategory[cat] || 0) + Number(t.amount)
+    })
+    const sporadicIncome = Object.entries(incomeByCategory).map(([cat, amount]) => ({
+      category: CATEGORY_LABELS[cat] || cat, amount,
+    })).sort((a, b) => b.amount - a.amount)
+
+    const receivables = accounts
+      .filter(a => a.type === 'receivable' && a.due_date)
+      .filter(a => {
+        const d = new Date(a.due_date! + 'T12:00:00')
+        return !isBefore(d, mStart) && !isAfter(d, mEnd)
+      })
+      .map(a => ({ person: a.person_name, amount: a.amount }))
+
+    const feList = fixedExpenses.map(fe => ({
+      description: fe.description, amount: Number(fe.monthly_amount),
+    }))
+
+    const expenseByCategory: Record<string, number> = {}
+    monthTx.filter(t => t.type === 'expense').forEach(t => {
+      const cat = t.category || 'otros'
+      expenseByCategory[cat] = (expenseByCategory[cat] || 0) + Number(t.amount)
+    })
+    const sporadicExpenses = Object.entries(expenseByCategory).map(([cat, amount]) => ({
+      category: CATEGORY_LABELS[cat] || cat, amount,
+    })).sort((a, b) => b.amount - a.amount)
+
+    const payables = accounts
+      .filter(a => a.type === 'payable' && a.due_date)
+      .filter(a => {
+        const d = new Date(a.due_date! + 'T12:00:00')
+        return !isBefore(d, mStart) && !isAfter(d, mEnd)
+      })
+      .map(a => ({ person: a.person_name, amount: a.amount }))
+
+    const totalFixedIncome = fixedIncome.reduce((s, r) => s + r.amount, 0)
+    const totalSporadicIncome = sporadicIncome.reduce((s, r) => s + r.amount, 0)
+    const totalReceivables = receivables.reduce((s, r) => s + r.amount, 0)
+    const totalIncome = totalFixedIncome + (isFuture ? 0 : totalSporadicIncome) + totalReceivables
+
+    const totalFixed = feList.reduce((s, r) => s + r.amount, 0)
+    const totalSporadicExp = sporadicExpenses.reduce((s, r) => s + r.amount, 0)
+    const totalPayables = payables.reduce((s, r) => s + r.amount, 0)
+    const totalExpense = totalFixed + (isFuture ? 0 : totalSporadicExp) + totalPayables
+
+    const net = totalIncome - totalExpense
+
+    const cardProjections = cards
+      .filter(c => c.card_type !== 'credit')
+      .filter(c => c.balance != null)
+      .map(card => {
+        const cardFixedIncome = incomeSources
+          .filter(s => s.card_id === card.id)
+          .reduce((s, src) => s + src.amount * countOccurrencesInMonth(src, monthDate), 0)
+
+        const cardFixedExpense = fixedExpenses
+          .filter(fe => fe.card_id === card.id)
+          .reduce((s, fe) => s + Number(fe.monthly_amount), 0)
+
+        const cardTxNet = monthTx
+          .filter(t => t.card_id === card.id)
+          .reduce((s, t) => t.type === 'income' ? s + Number(t.amount) : s - Number(t.amount), 0)
+
+        const projected = (card.balance ?? 0) + cardFixedIncome - cardFixedExpense + (isFuture ? 0 : cardTxNet)
+        return { card, projected }
+      })
+
+    return {
+      fixedIncome, sporadicIncome, receivables,
+      fixedExpenses: feList, sporadicExpenses, payables,
+      totalIncome, totalExpense, net, cardProjections,
     }
-    const months = period === 'semester' ? 6 : 12
-    return sum + (getMonthlyIncomeAmount(src) * months)
-  }, 0)
+  }
 
-  const projectedEndOfMonth = isCurrentMonth
-    ? (projectedIncome - projectedFixedExpenses) + netResult - totalIncome + totalExpense - totalExpense
-    : 0
-
-  const remainingFixedNotPaid = projectedFixedExpenses
-  const remainingIncome = projectedIncome - totalIncome
-  const projectedNet = netResult + remainingIncome - remainingFixedNotPaid
+  const monthsData = months.map(m => ({ month: m, data: buildMonthData(m) }))
 
   async function downloadExcel() {
     const XLSX = await import('xlsx')
     const wb = XLSX.utils.book_new()
+    const rows: (string | number)[][] = [['Estado de Resultados - Nummo']]
+    rows.push([])
 
-    const periodLabel = period === 'month'
-      ? format(rangeStart, 'MMMM yyyy', { locale: es })
-      : period === 'semester'
-        ? `${format(rangeStart, 'MMM yyyy', { locale: es })} - ${format(rangeEnd, 'MMM yyyy', { locale: es })}`
-        : format(rangeStart, 'yyyy')
-
-    const rows: (string | number)[][] = [
-      ['Estado de Resultados', '', ''],
-      ['Periodo:', periodLabel, ''],
-      ['', '', ''],
-      ['INGRESOS', '', ''],
-      ['Categoría', 'Monto', ''],
-    ]
-
-    incomeRows.forEach((r) => rows.push([r.category, r.income, '']))
-    rows.push(['Total Ingresos', totalIncome, ''])
-    rows.push(['', '', ''])
-    rows.push(['GASTOS', '', ''])
-    rows.push(['Categoría', 'Monto', ''])
-    expenseRows.forEach((r) => rows.push([r.category, r.expense, '']))
-    rows.push(['Total Gastos', totalExpense, ''])
-    rows.push(['', '', ''])
-    rows.push(['RESULTADO NETO', netResult, ''])
-
-    if (isCurrentMonth) {
-      rows.push(['', '', ''])
-      rows.push(['PROYECCIÓN FIN DE MES', '', ''])
-      rows.push(['Ingreso proyectado restante', remainingIncome, ''])
-      rows.push(['Gastos fijos pendientes', remainingFixedNotPaid, ''])
-      rows.push(['Resultado proyectado', projectedNet, ''])
+    if (isMultiMonth) {
+      const header = ['Concepto', ...months.map(m => format(m, 'MMM yyyy', { locale: es }))]
+      rows.push(header)
+      rows.push([])
+      rows.push(['INGRESOS FIJOS'])
+      const allFixedIncome = new Set<string>()
+      monthsData.forEach(md => md.data.fixedIncome.forEach(r => allFixedIncome.add(r.description)))
+      allFixedIncome.forEach(desc => {
+        rows.push([desc, ...monthsData.map(md => md.data.fixedIncome.find(r => r.description === desc)?.amount ?? 0)])
+      })
+      rows.push(['Total ingresos fijos', ...monthsData.map(md => md.data.fixedIncome.reduce((s, r) => s + r.amount, 0))])
+      rows.push([])
+      rows.push(['RESULTADO NETO', ...monthsData.map(md => md.data.net)])
+    } else {
+      const md = monthsData[0].data
+      rows.push(['INGRESOS FIJOS'])
+      md.fixedIncome.forEach(r => rows.push([r.description, r.amount]))
+      rows.push([])
+      rows.push(['GASTOS FIJOS'])
+      md.fixedExpenses.forEach(r => rows.push([r.description, r.amount]))
+      rows.push([])
+      rows.push(['RESULTADO NETO', md.net])
     }
 
     const ws = XLSX.utils.aoa_to_sheet(rows)
-    ws['!cols'] = [{ wch: 30 }, { wch: 18 }, { wch: 5 }]
-
+    ws['!cols'] = [{ wch: 30 }, ...months.map(() => ({ wch: 16 }))]
     XLSX.utils.book_append_sheet(wb, ws, 'P&L')
     XLSX.writeFile(wb, `nummo_pyl_${format(new Date(), 'yyyy-MM-dd')}.xlsx`)
   }
@@ -216,12 +261,19 @@ export default function PylPage() {
     )
   }
 
+  const currentData = monthsData[0].data
+
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-full mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Estado de resultados</h1>
-          <p className="text-sm text-muted">Ingresos vs Gastos por periodo</p>
+          <p className="text-sm text-muted">
+            {isMultiMonth
+              ? `${format(months[0], 'MMMM yyyy', { locale: es })} a ${format(months[months.length - 1], 'MMMM yyyy', { locale: es })}`
+              : format(months[0], 'MMMM yyyy', { locale: es })
+            }
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex gap-1 bg-white rounded-lg border border-border p-1">
@@ -247,6 +299,26 @@ export default function PylPage() {
         </div>
       </div>
 
+      {!isMultiMonth ? (
+        <SingleMonthView data={currentData} />
+      ) : (
+        <MultiMonthView monthsData={monthsData} />
+      )}
+    </div>
+  )
+}
+
+function SingleMonthView({ data }: { data: MonthData }) {
+  const totalIncome = data.fixedIncome.reduce((s, r) => s + r.amount, 0)
+    + data.sporadicIncome.reduce((s, r) => s + r.amount, 0)
+    + data.receivables.reduce((s, r) => s + r.amount, 0)
+  const totalExpense = data.fixedExpenses.reduce((s, r) => s + r.amount, 0)
+    + data.sporadicExpenses.reduce((s, r) => s + r.amount, 0)
+    + data.payables.reduce((s, r) => s + r.amount, 0)
+  const net = totalIncome - totalExpense
+
+  return (
+    <div className="space-y-4">
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-border p-4 text-center">
           <p className="text-xs text-muted mb-1">Ingresos</p>
@@ -258,145 +330,280 @@ export default function PylPage() {
         </div>
         <div className="bg-white rounded-xl border border-border p-4 text-center">
           <p className="text-xs text-muted mb-1">Resultado</p>
-          <p className={`text-xl font-bold ${netResult >= 0 ? 'text-success' : 'text-danger'}`}>
-            {formatMXN(netResult)}
-          </p>
+          <p className={`text-xl font-bold ${net >= 0 ? 'text-success' : 'text-danger'}`}>{formatMXN(net)}</p>
         </div>
       </div>
 
-      {isCurrentMonth && (
-        <div className="bg-accent/5 border border-accent/20 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-3">
-            {projectedNet >= 0 ? <TrendingUp size={18} className="text-success" /> : <TrendingDown size={18} className="text-danger" />}
-            <h3 className="font-semibold text-sm">Proyección a fin de mes</h3>
-            <span className="text-xs text-muted">({daysLeft} días restantes)</span>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-xs text-muted mb-1">Ingreso restante esperado</p>
-              <p className="text-lg font-bold text-success">{formatMXN(remainingIncome)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted mb-1">Gastos fijos pendientes</p>
-              <p className="text-lg font-bold text-danger">{formatMXN(remainingFixedNotPaid)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted mb-1">Resultado proyectado</p>
-              <p className={`text-lg font-bold ${projectedNet >= 0 ? 'text-success' : 'text-danger'}`}>
-                {formatMXN(projectedNet)}
-              </p>
-            </div>
-          </div>
-          <p className="text-xs text-muted mt-3">
-            Basado en tus ingresos configurados y gastos fijos activos. Las transacciones ya registradas se incluyen en el resultado actual.
-          </p>
-        </div>
-      )}
+      <Section title="Ingresos fijos" color="success" items={data.fixedIncome.map(r => ({ label: r.description, amount: r.amount }))} />
+      <Section title="Ingresos esporádicos" color="success" items={data.sporadicIncome.map(r => ({ label: r.category, amount: r.amount }))} emptyText="Sin ingresos esporádicos" />
+      <Section title="Cuentas por cobrar" color="success" items={data.receivables.map(r => ({ label: r.person, amount: r.amount }))} emptyText="Sin cuentas por cobrar" />
+      <Section title="Gastos fijos" color="danger" items={data.fixedExpenses.map(r => ({ label: r.description, amount: r.amount }))} />
+      <Section title="Gastos esporádicos" color="danger" items={data.sporadicExpenses.map(r => ({ label: r.category, amount: r.amount }))} emptyText="Sin gastos esporádicos" />
+      <Section title="Cuentas por pagar" color="danger" items={data.payables.map(r => ({ label: r.person, amount: r.amount }))} emptyText="Sin cuentas por pagar" />
 
-      {fixedExpenses.length > 0 && (
-        <div className="bg-white rounded-xl border border-border overflow-hidden">
-          <div className="bg-yellow-50 px-4 py-3 border-b border-border">
-            <h3 className="font-semibold text-sm text-yellow-700">Gastos fijos mensuales</h3>
-          </div>
-          <div className="divide-y divide-border">
-            {fixedExpenses.map((fe) => (
-              <div key={fe.id} className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <span className="text-sm">{fe.description}</span>
-                  <span className="text-xs text-muted ml-2">{fe.category}</span>
-                </div>
-                <span className="text-sm font-medium text-danger">{formatMXN(fe.monthly_amount)}/mes</span>
-              </div>
-            ))}
-            <div className="flex items-center justify-between px-4 py-3 bg-yellow-50">
-              <span className="text-sm font-semibold">Total mensual fijo</span>
-              <span className="text-sm font-bold text-danger">{formatMXN(projectedFixedExpenses)}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {incomeSources.length > 0 && (
-        <div className="bg-white rounded-xl border border-border overflow-hidden">
-          <div className="bg-success/5 px-4 py-3 border-b border-border">
-            <h3 className="font-semibold text-sm text-success">Fuentes de ingreso</h3>
-          </div>
-          <div className="divide-y divide-border">
-            {incomeSources.map((src) => (
-              <div key={src.id} className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <span className="text-sm">{src.description}</span>
-                  <span className="text-xs text-muted ml-2 capitalize">{src.frequency === 'monthly' ? 'Mensual' : src.frequency === 'biweekly' ? 'Quincenal' : 'Semanal'}</span>
-                </div>
-                <span className="text-sm font-medium text-success">{formatMXN(src.amount)}</span>
-              </div>
-            ))}
-            <div className="flex items-center justify-between px-4 py-3 bg-success/5">
-              <span className="text-sm font-semibold">Ingreso mensual estimado</span>
-              <span className="text-sm font-bold text-success">{formatMXN(incomeSources.reduce((s, src) => s + getMonthlyIncomeAmount(src), 0))}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-white rounded-xl border border-border overflow-hidden">
-        <div className="bg-success/5 px-4 py-3 border-b border-border">
-          <h3 className="font-semibold text-sm text-success">Ingresos registrados</h3>
-        </div>
-        {incomeRows.length === 0 ? (
-          <p className="text-sm text-muted p-4">Sin ingresos registrados en este periodo</p>
-        ) : (
-          <div className="divide-y divide-border">
-            {incomeRows.map((r) => (
-              <div key={r.category} className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm">{r.category}</span>
-                <span className="text-sm font-medium text-success">{formatMXN(r.income)}</span>
-              </div>
-            ))}
-            <div className="flex items-center justify-between px-4 py-3 bg-success/5">
-              <span className="text-sm font-semibold">Total</span>
-              <span className="text-sm font-bold text-success">{formatMXN(totalIncome)}</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-xl border border-border overflow-hidden">
-        <div className="bg-danger/5 px-4 py-3 border-b border-border">
-          <h3 className="font-semibold text-sm text-danger">Gastos registrados</h3>
-        </div>
-        {expenseRows.length === 0 ? (
-          <p className="text-sm text-muted p-4">Sin gastos registrados en este periodo</p>
-        ) : (
-          <div className="divide-y divide-border">
-            {expenseRows.map((r) => (
-              <div key={r.category} className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm">{r.category}</span>
-                <span className="text-sm font-medium text-danger">{formatMXN(r.expense)}</span>
-              </div>
-            ))}
-            <div className="flex items-center justify-between px-4 py-3 bg-danger/5">
-              <span className="text-sm font-semibold">Total</span>
-              <span className="text-sm font-bold text-danger">{formatMXN(totalExpense)}</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className={`rounded-xl border p-4 ${netResult >= 0 ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}>
+      <div className={`rounded-xl border p-4 ${net >= 0 ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}>
         <div className="flex items-center justify-between">
           <span className="font-semibold">Resultado neto</span>
-          <span className={`text-2xl font-bold ${netResult >= 0 ? 'text-success' : 'text-danger'}`}>
-            {formatMXN(netResult)}
-          </span>
+          <span className={`text-2xl font-bold ${net >= 0 ? 'text-success' : 'text-danger'}`}>{formatMXN(net)}</span>
         </div>
-        <p className="text-xs text-muted mt-1">
-          {netResult >= 0
-            ? `Estás generando un superávit de ${formatMXN(netResult)} en este periodo`
-            : `Tu gasto supera tus ingresos por ${formatMXN(Math.abs(netResult))}`
-          }
-        </p>
       </div>
+
+      {data.cardProjections.length > 0 && (
+        <div className="bg-white rounded-xl border border-border overflow-hidden">
+          <div className="bg-accent/5 px-4 py-3 border-b border-border">
+            <h3 className="font-semibold text-sm text-accent">Proyección por cuenta a fin de mes</h3>
+          </div>
+          <div className="divide-y divide-border">
+            {data.cardProjections.map(cp => (
+              <div key={cp.card.id} className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cp.card.color }} />
+                  <span className="text-sm">{cp.card.alias}</span>
+                  <span className="text-xs text-muted">{cp.card.bank_name}</span>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted">Actual: {formatMXN(cp.card.balance ?? 0)}</p>
+                  <p className={`text-sm font-bold ${cp.projected >= 0 ? 'text-accent' : 'text-danger'}`}>
+                    Proyectado: {formatMXN(cp.projected)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+function Section({ title, color, items, emptyText }: {
+  title: string
+  color: 'success' | 'danger'
+  items: { label: string; amount: number }[]
+  emptyText?: string
+}) {
+  const total = items.reduce((s, r) => s + r.amount, 0)
+  const bg = color === 'success' ? 'bg-success/5' : 'bg-danger/5'
+  const textColor = color === 'success' ? 'text-success' : 'text-danger'
+
+  return (
+    <div className="bg-white rounded-xl border border-border overflow-hidden">
+      <div className={`${bg} px-4 py-3 border-b border-border`}>
+        <h3 className={`font-semibold text-sm ${textColor}`}>{title}</h3>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-sm text-muted p-4">{emptyText || 'Sin registros'}</p>
+      ) : (
+        <div className="divide-y divide-border">
+          {items.map((r, i) => (
+            <div key={`${r.label}-${i}`} className="flex items-center justify-between px-4 py-3">
+              <span className="text-sm">{r.label}</span>
+              <span className={`text-sm font-medium ${textColor}`}>{formatMXN(r.amount)}</span>
+            </div>
+          ))}
+          <div className={`flex items-center justify-between px-4 py-3 ${bg}`}>
+            <span className="text-sm font-semibold">Total</span>
+            <span className={`text-sm font-bold ${textColor}`}>{formatMXN(total)}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: MonthData }[] }) {
+  const allFixedIncome = [...new Set(monthsData.flatMap(md => md.data.fixedIncome.map(r => r.description)))]
+  const allFixedExpenses = [...new Set(monthsData.flatMap(md => md.data.fixedExpenses.map(r => r.description)))]
+  const allSporadicIncome = [...new Set(monthsData.flatMap(md => md.data.sporadicIncome.map(r => r.category)))]
+  const allSporadicExpenses = [...new Set(monthsData.flatMap(md => md.data.sporadicExpenses.map(r => r.category)))]
+  const allReceivables = [...new Set(monthsData.flatMap(md => md.data.receivables.map(r => r.person)))]
+  const allPayables = [...new Set(monthsData.flatMap(md => md.data.payables.map(r => r.person)))]
+  const allCards = [...new Set(monthsData.flatMap(md => md.data.cardProjections.map(cp => cp.card.id)))]
+  const cardMap = Object.fromEntries(monthsData.flatMap(md => md.data.cardProjections.map(cp => [cp.card.id, cp.card])))
+
+  const now = new Date()
+
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-gray-50 border-b border-border">
+            <th className="text-left px-4 py-3 font-semibold text-foreground sticky left-0 bg-gray-50 min-w-[200px]">Concepto</th>
+            {monthsData.map(md => (
+              <th key={md.month.toISOString()} className={`text-right px-4 py-3 font-semibold min-w-[120px] capitalize ${
+                isSameMonth(md.month, now) ? 'text-accent' : 'text-foreground'
+              }`}>
+                {format(md.month, 'MMM yy', { locale: es })}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <GroupHeader label="Ingresos fijos" color="success" colSpan={monthsData.length + 1} />
+          {allFixedIncome.map(desc => (
+            <DataRow key={desc} label={desc} values={monthsData.map(md =>
+              md.data.fixedIncome.find(r => r.description === desc)?.amount ?? 0
+            )} color="success" now={now} months={monthsData.map(m => m.month)} />
+          ))}
+          <TotalRow label="Subtotal" values={monthsData.map(md =>
+            md.data.fixedIncome.reduce((s, r) => s + r.amount, 0)
+          )} color="success" />
+
+          {allSporadicIncome.length > 0 && (
+            <>
+              <GroupHeader label="Ingresos esporádicos" color="success" colSpan={monthsData.length + 1} />
+              {allSporadicIncome.map(cat => (
+                <DataRow key={cat} label={cat} values={monthsData.map(md =>
+                  md.data.sporadicIncome.find(r => r.category === cat)?.amount ?? 0
+                )} color="success" now={now} months={monthsData.map(m => m.month)} />
+              ))}
+              <TotalRow label="Subtotal" values={monthsData.map(md =>
+                md.data.sporadicIncome.reduce((s, r) => s + r.amount, 0)
+              )} color="success" />
+            </>
+          )}
+
+          {allReceivables.length > 0 && (
+            <>
+              <GroupHeader label="Cuentas por cobrar" color="success" colSpan={monthsData.length + 1} />
+              {allReceivables.map(person => (
+                <DataRow key={person} label={person} values={monthsData.map(md =>
+                  md.data.receivables.find(r => r.person === person)?.amount ?? 0
+                )} color="success" now={now} months={monthsData.map(m => m.month)} />
+              ))}
+              <TotalRow label="Subtotal" values={monthsData.map(md =>
+                md.data.receivables.reduce((s, r) => s + r.amount, 0)
+              )} color="success" />
+            </>
+          )}
+
+          <TotalRow label="Total ingresos" values={monthsData.map(md => md.data.totalIncome)} color="success" bold />
+
+          <GroupHeader label="Gastos fijos" color="danger" colSpan={monthsData.length + 1} />
+          {allFixedExpenses.map(desc => (
+            <DataRow key={desc} label={desc} values={monthsData.map(md =>
+              md.data.fixedExpenses.find(r => r.description === desc)?.amount ?? 0
+            )} color="danger" now={now} months={monthsData.map(m => m.month)} />
+          ))}
+          <TotalRow label="Subtotal" values={monthsData.map(md =>
+            md.data.fixedExpenses.reduce((s, r) => s + r.amount, 0)
+          )} color="danger" />
+
+          {allSporadicExpenses.length > 0 && (
+            <>
+              <GroupHeader label="Gastos esporádicos" color="danger" colSpan={monthsData.length + 1} />
+              {allSporadicExpenses.map(cat => (
+                <DataRow key={cat} label={cat} values={monthsData.map(md =>
+                  md.data.sporadicExpenses.find(r => r.category === cat)?.amount ?? 0
+                )} color="danger" now={now} months={monthsData.map(m => m.month)} />
+              ))}
+              <TotalRow label="Subtotal" values={monthsData.map(md =>
+                md.data.sporadicExpenses.reduce((s, r) => s + r.amount, 0)
+              )} color="danger" />
+            </>
+          )}
+
+          {allPayables.length > 0 && (
+            <>
+              <GroupHeader label="Cuentas por pagar" color="danger" colSpan={monthsData.length + 1} />
+              {allPayables.map(person => (
+                <DataRow key={person} label={person} values={monthsData.map(md =>
+                  md.data.payables.find(r => r.person === person)?.amount ?? 0
+                )} color="danger" now={now} months={monthsData.map(m => m.month)} />
+              ))}
+              <TotalRow label="Subtotal" values={monthsData.map(md =>
+                md.data.payables.reduce((s, r) => s + r.amount, 0)
+              )} color="danger" />
+            </>
+          )}
+
+          <TotalRow label="Total gastos" values={monthsData.map(md => md.data.totalExpense)} color="danger" bold />
+
+          <tr className="border-t-2 border-border bg-gray-50">
+            <td className="px-4 py-3 font-bold sticky left-0 bg-gray-50">Resultado neto</td>
+            {monthsData.map((md, i) => (
+              <td key={i} className={`text-right px-4 py-3 font-bold ${md.data.net >= 0 ? 'text-success' : 'text-danger'}`}>
+                {formatMXN(md.data.net)}
+              </td>
+            ))}
+          </tr>
+
+          {allCards.length > 0 && (
+            <>
+              <GroupHeader label="Proyección por cuenta" color="accent" colSpan={monthsData.length + 1} />
+              {allCards.map(cardId => {
+                const card = cardMap[cardId]
+                return (
+                  <tr key={cardId} className="border-t border-border">
+                    <td className="px-4 py-2 sticky left-0 bg-white">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: card.color }} />
+                        <span className="text-sm truncate">{card.alias}</span>
+                      </div>
+                    </td>
+                    {monthsData.map((md, i) => {
+                      const cp = md.data.cardProjections.find(c => c.card.id === cardId)
+                      const val = cp?.projected ?? 0
+                      return (
+                        <td key={i} className={`text-right px-4 py-2 text-sm font-medium ${val >= 0 ? 'text-accent' : 'text-danger'}`}>
+                          {fmtShort(val)}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                )
+              })}
+            </>
+          )}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function GroupHeader({ label, color, colSpan }: { label: string; color: string; colSpan: number }) {
+  const bgMap: Record<string, string> = { success: 'bg-success/5', danger: 'bg-danger/5', accent: 'bg-accent/5' }
+  const textMap: Record<string, string> = { success: 'text-success', danger: 'text-danger', accent: 'text-accent' }
+  return (
+    <tr className={bgMap[color] || 'bg-gray-50'}>
+      <td colSpan={colSpan} className={`px-4 py-2 font-semibold text-xs uppercase tracking-wide ${textMap[color] || ''} sticky left-0 ${bgMap[color] || 'bg-gray-50'}`}>
+        {label}
+      </td>
+    </tr>
+  )
+}
+
+function DataRow({ label, values, color, now, months }: {
+  label: string; values: number[]; color: string; now: Date; months: Date[]
+}) {
+  const textColor = color === 'success' ? 'text-success' : 'text-danger'
+  return (
+    <tr className="border-t border-border/50">
+      <td className="px-4 py-2 text-sm sticky left-0 bg-white">{label}</td>
+      {values.map((v, i) => (
+        <td key={i} className={`text-right px-4 py-2 text-sm ${v > 0 ? textColor : 'text-muted'} ${
+          isSameMonth(months[i], now) ? 'font-medium' : ''
+        }`}>
+          {v > 0 ? fmtShort(v) : '-'}
+        </td>
+      ))}
+    </tr>
+  )
+}
+
+function TotalRow({ label, values, color, bold }: {
+  label: string; values: number[]; color: string; bold?: boolean
+}) {
+  const textColor = color === 'success' ? 'text-success' : 'text-danger'
+  const bg = bold ? 'bg-gray-50' : ''
+  return (
+    <tr className={`border-t border-border ${bg}`}>
+      <td className={`px-4 py-2 ${bold ? 'font-bold' : 'font-semibold'} text-sm sticky left-0 ${bg || 'bg-white'}`}>{label}</td>
+      {values.map((v, i) => (
+        <td key={i} className={`text-right px-4 py-2 text-sm ${bold ? 'font-bold' : 'font-semibold'} ${textColor}`}>
+          {formatMXN(v)}
+        </td>
+      ))}
+    </tr>
   )
 }
