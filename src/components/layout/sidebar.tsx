@@ -50,6 +50,7 @@ export function Sidebar() {
   }
 
   return (
+    <>
     <aside className="hidden lg:flex flex-col w-64 bg-primary text-white h-screen sticky top-0">
       <div className="p-6">
         <div className="flex items-center gap-2">
@@ -98,15 +99,17 @@ export function Sidebar() {
         </button>
       </div>
 
-      <ConfirmDialog
-        open={showLogout}
-        title="Cerrar sesión"
-        message="¿Seguro que deseas cerrar tu sesión?"
-        confirmLabel="Cerrar sesión"
-        variant="warning"
-        onConfirm={handleLogout}
-        onCancel={() => setShowLogout(false)}
-      />
     </aside>
+
+    <ConfirmDialog
+      open={showLogout}
+      title="Cerrar sesión"
+      message="¿Seguro que deseas cerrar tu sesión?"
+      confirmLabel="Cerrar sesión"
+      variant="warning"
+      onConfirm={handleLogout}
+      onCancel={() => setShowLogout(false)}
+    />
+    </>
   )
 }
