@@ -1,0 +1,85 @@
+'use client'
+
+import { useEffect, useRef } from 'react'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
+
+export function useYields() {
+  const processed = useRef(false)
+
+  useEffect(() => {
+    if (processed.current) return
+    processed.current = true
+    applyYields()
+  }, [])
+}
+
+async function applyYields() {
+  if (!isSupabaseConfigured()) return
+
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { data: cards } = await supabase
+    .from('cards')
+    .select('*')
+    .eq('has_yields', true)
+    .eq('card_type', 'debit')
+    .not('yield_rate', 'is', null)
+    .not('balance', 'is', null)
+
+  if (!cards?.length) return
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayStr = today.toISOString().split('T')[0]
+
+  for (const card of cards) {
+    const lastDate = card.last_yield_date
+      ? new Date(card.last_yield_date + 'T00:00:00')
+      : null
+
+    if (!lastDate) continue
+    if (lastDate >= today) continue
+
+    const diffMs = today.getTime() - lastDate.getTime()
+    const pendingDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    if (pendingDays <= 0) continue
+
+    const dailyRate = (card.yield_rate / 100) / 365
+    let currentBalance = card.balance
+    let totalYield = 0
+
+    for (let i = 0; i < pendingDays; i++) {
+      const dayYield = Math.round(currentBalance * dailyRate * 100) / 100
+      totalYield += dayYield
+      currentBalance += dayYield
+    }
+
+    if (totalYield <= 0) continue
+
+    totalYield = Math.round(totalYield * 100) / 100
+
+    await supabase.from('transactions').insert({
+      user_id: user.id,
+      card_id: card.id,
+      amount: totalYield,
+      description: `Rendimientos ${card.alias} (${pendingDays} día${pendingDays > 1 ? 's' : ''})`,
+      category: 'Rendimientos',
+      type: 'income',
+      date: todayStr,
+      is_recurring: false,
+      installment_months: null,
+      installment_current: null,
+      notes: null,
+    })
+
+    await supabase
+      .from('cards')
+      .update({
+        balance: Math.round(currentBalance * 100) / 100,
+        last_yield_date: todayStr,
+      })
+      .eq('id', card.id)
+  }
+}

@@ -16,5 +16,7 @@ export const BANKS = [
   'Rappi',
   'Stori',
   'Klar',
+  'Mercado Pago',
+  'Revolut',
   'Otro',
 ] as const

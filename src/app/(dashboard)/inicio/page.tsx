@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { useProfileContext } from '@/lib/context/profile-context'
+import { useYields } from '@/lib/hooks/use-yields'
 import { QuickEntry } from '@/components/dashboard/quick-entry'
 import { SummaryCards } from '@/components/dashboard/summary-cards'
 import { SpendingChart } from '@/components/dashboard/spending-chart'
@@ -15,6 +16,7 @@ export default function InicioPage() {
   const [cards, setCards] = useState<Card[]>([])
   const [loading, setLoading] = useState(true)
   const { firstName } = useProfileContext()
+  useYields()
 
   useEffect(() => {
     async function load() {

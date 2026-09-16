@@ -81,6 +81,12 @@ export function CardItem({ card, onEdit, onDelete }: CardItemProps) {
               <p className="font-medium">{formatMXN(card.balance)}</p>
             </div>
           )}
+          {card.has_yields && card.yield_rate != null && (
+            <div>
+              <p className="text-white/60">Rendimiento</p>
+              <p className="font-medium">{card.yield_rate}% anual</p>
+            </div>
+          )}
         </div>
         <Icon size={24} className="text-white/40" />
       </div>
