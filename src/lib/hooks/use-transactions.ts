@@ -51,12 +51,27 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
     const supabase = createClient()
     const { data: card } = await supabase
       .from('cards')
-      .select('balance, card_type')
+      .select('balance, card_type, used_credit')
       .eq('id', cardId)
       .single()
 
-    if (!card || card.balance == null) return
-    if (card.card_type !== 'debit' && card.card_type !== 'cash') return
+    if (!card) return
+
+    if (card.card_type === 'credit') {
+      const currentUsed = Number(card.used_credit ?? 0)
+      const newUsed = type === 'expense'
+        ? currentUsed + amount
+        : Math.max(0, currentUsed - amount)
+      await supabase
+        .from('cards')
+        .update({ used_credit: newUsed })
+        .eq('id', cardId)
+      return
+    }
+
+    if (card.balance == null) return
+    const balanceTypes = ['debit', 'cash', 'savings', 'voucher']
+    if (!balanceTypes.includes(card.card_type)) return
 
     const newBalance = type === 'expense'
       ? card.balance - amount
@@ -83,11 +98,17 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       .single()
 
     if (!error && data) {
-      const cardId = transaction.card_id as string | null
       const amount = transaction.amount as number
-      const type = transaction.type as 'expense' | 'income'
-      if (cardId) {
-        await updateCardBalance(cardId, amount, type)
+      const isTransfer = transaction.is_transfer as boolean
+      if (isTransfer) {
+        const fromId = transaction.transfer_from_card_id as string | null
+        const toId = transaction.transfer_to_card_id as string | null
+        if (fromId) await updateCardBalance(fromId, amount, 'expense')
+        if (toId) await updateCardBalance(toId, amount, 'income')
+      } else {
+        const cardId = transaction.card_id as string | null
+        const type = transaction.type as 'expense' | 'income'
+        if (cardId) await updateCardBalance(cardId, amount, type)
       }
       setTransactions((prev) => [data, ...prev])
     }
