@@ -25,7 +25,7 @@ export default function CardDetailPage() {
       const supabase = createClient()
       const [cardRes, txRes, feRes] = await Promise.all([
         supabase.from('cards').select('*').eq('id', id).single(),
-        supabase.from('transactions').select('*, card:cards(*)').eq('card_id', id).order('date', { ascending: false }).limit(50),
+        supabase.from('transactions').select('*, card:cards!transactions_card_id_fkey(*)').eq('card_id', id).order('date', { ascending: false }).limit(50),
         supabase.from('fixed_expenses').select('*').eq('card_id', id).eq('status', 'active'),
       ])
       setCard(cardRes.data)
