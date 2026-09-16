@@ -14,6 +14,9 @@ export interface Card {
   payment_day: number | null
   credit_limit: number | null
   balance: number | null
+  has_yields: boolean
+  yield_rate: number | null
+  last_yield_date: string | null
   color: string
   created_at: string
   updated_at: string
