@@ -32,15 +32,9 @@ export function Topbar() {
   }
 
   return (
-    <header className="lg:hidden bg-primary text-white">
-      <div className="flex items-center justify-between px-4 py-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <img src="/favicon_nummo.png" alt="Nummo" className="h-7 w-7 rounded-md" />
-            <h1 className="text-lg font-bold text-accent">Nummo</h1>
-          </div>
-          <p className="text-[10px] text-gray-400 -mt-0.5">Control financiero inteligente</p>
-        </div>
+    <header className="lg:hidden bg-primary text-white pt-[env(safe-area-inset-top)]">
+      <div className="flex items-center justify-between px-4 py-2">
+        <h1 className="text-lg font-bold text-accent">Nummo</h1>
         <button onClick={() => setMenuOpen(!menuOpen)} className="p-1">
           {menuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>

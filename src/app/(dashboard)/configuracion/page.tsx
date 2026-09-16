@@ -33,6 +33,7 @@ export default function ConfiguracionPage() {
   const [tokens, setTokens] = useState<Array<{ id: string; token: string; label: string; is_active: boolean; created_at: string }>>([])
   const [tokensLoading, setTokensLoading] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const [testingToken, setTestingToken] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -142,6 +143,50 @@ export default function ConfiguracionPage() {
   const apiUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/api/shortcuts/expense`
     : ''
+
+  function copyFullConfig(token: string) {
+    const config = [
+      `URL: ${apiUrl}`,
+      `Metodo: POST`,
+      ``,
+      `Encabezados:`,
+      `  Authorization: Bearer ${token}`,
+      `  Content-Type: application/json`,
+      ``,
+      `Cuerpo (JSON):`,
+      `{`,
+      `  "amount": [Monto de la transaccion],`,
+      `  "merchant": "[Nombre del comercio]"`,
+      `}`,
+    ].join('\n')
+    navigator.clipboard.writeText(config)
+    setCopiedField('full')
+    setTimeout(() => setCopiedField(null), 3000)
+    toast('Configuracion copiada al portapapeles', 'success')
+  }
+
+  async function testToken(token: string) {
+    setTestingToken(true)
+    try {
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ amount: 0.01, merchant: 'Prueba Nummo' }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast('Conexion exitosa. Revisa tus gastos para ver la prueba.', 'success')
+      } else {
+        toast(data.error || 'Error de conexion', 'error')
+      }
+    } catch {
+      toast('No se pudo conectar al servidor', 'error')
+    }
+    setTestingToken(false)
+  }
 
   async function handleSaveAI() {
     if (!isSupabaseConfigured()) { toast('BD no configurada', 'error'); return }
@@ -283,87 +328,126 @@ export default function ConfiguracionPage() {
 
         {shortcutsOpen && (
           <div className="px-6 pb-6 space-y-5 border-t border-border pt-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Tus tokens de acceso</p>
-                <Button size="sm" onClick={createToken}>
-                  <Plus size={14} /> Crear token
+            {tokensLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin h-5 w-5 border-2 border-accent border-t-transparent rounded-full" />
+              </div>
+            ) : tokens.length === 0 ? (
+              <div className="text-center py-4 space-y-3">
+                <p className="text-sm text-muted">Crea un token para conectar tu iPhone con Nummo</p>
+                <Button onClick={createToken}>
+                  <Plus size={14} /> Generar token de acceso
                 </Button>
               </div>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-muted uppercase tracking-wide">Pasos en la app Atajos</p>
 
-              {tokensLoading ? (
-                <div className="flex justify-center py-4">
-                  <div className="animate-spin h-5 w-5 border-2 border-accent border-t-transparent rounded-full" />
+                  <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-2">
+                    <p className="text-sm font-medium">1. Crear la automatizacion</p>
+                    <p className="text-xs text-muted">
+                      Atajos &gt; Automatizacion &gt; <strong>+</strong> &gt; busca <strong>&quot;Transaccion&quot;</strong> &gt; selecciona <strong>&quot;Se completa una transaccion&quot;</strong>
+                    </p>
+                  </div>
+
+                  <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-3">
+                    <p className="text-sm font-medium">2. Agregar la accion &quot;Obtener contenido de la URL&quot;</p>
+
+                    <CopyField
+                      label="URL"
+                      value={apiUrl}
+                      copied={copiedField === 'url'}
+                      onCopy={() => copyToClipboard(apiUrl, 'url')}
+                    />
+
+                    <p className="text-xs text-muted">Cambia el metodo a <strong>POST</strong></p>
+
+                    <CopyField
+                      label="Encabezado: Authorization"
+                      value={`Bearer ${tokens[0].token}`}
+                      copied={copiedField === 'auth'}
+                      onCopy={() => copyToClipboard(`Bearer ${tokens[0].token}`, 'auth')}
+                    />
+                  </div>
+
+                  <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-3">
+                    <p className="text-sm font-medium">3. Configurar el cuerpo JSON</p>
+                    <p className="text-xs text-muted">
+                      En <strong>Cuerpo</strong> elige <strong>JSON</strong>, agrega dos campos:
+                    </p>
+
+                    <CopyField
+                      label="Clave 1"
+                      value="amount"
+                      copied={copiedField === 'k1'}
+                      onCopy={() => copyToClipboard('amount', 'k1')}
+                    />
+                    <p className="text-xs text-muted -mt-1">
+                      Valor: selecciona la variable magica <strong>Monto</strong>
+                    </p>
+
+                    <CopyField
+                      label="Clave 2"
+                      value="merchant"
+                      copied={copiedField === 'k2'}
+                      onCopy={() => copyToClipboard('merchant', 'k2')}
+                    />
+                    <p className="text-xs text-muted -mt-1">
+                      Valor: selecciona la variable magica <strong>Comercio</strong>
+                    </p>
+                  </div>
                 </div>
-              ) : tokens.length === 0 ? (
-                <p className="text-sm text-muted py-2">No tienes tokens. Crea uno para conectar Apple Shortcuts.</p>
-              ) : (
-                <div className="space-y-2">
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => copyFullConfig(tokens[0].token)}
+                    className="flex-1"
+                  >
+                    {copiedField === 'full' ? <Check size={14} /> : <Copy size={14} />}
+                    {copiedField === 'full' ? 'Copiado' : 'Copiar todo'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => testToken(tokens[0].token)}
+                    loading={testingToken}
+                    className="flex-1"
+                  >
+                    Probar conexion
+                  </Button>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
+                  Los gastos se categorizan con IA de forma automatica. Si necesitas ajustar algo, editalo desde la app.
+                </div>
+
+                <div className="border-t border-border pt-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted">Tokens activos</p>
+                    <Button size="sm" variant="outline" onClick={createToken}>
+                      <Plus size={12} /> Nuevo
+                    </Button>
+                  </div>
                   {tokens.map(t => (
-                    <div key={t.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
-                      <code className="text-xs flex-1 truncate text-foreground">{t.token}</code>
+                    <div key={t.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-1.5">
+                      <code className="text-[10px] flex-1 truncate text-muted">{t.token.slice(0, 20)}...</code>
                       <button
                         onClick={() => copyToClipboard(t.token, t.id)}
                         className="text-muted hover:text-accent p-1"
-                        title="Copiar token"
                       >
-                        {copiedField === t.id ? <Check size={14} className="text-success" /> : <Copy size={14} />}
+                        {copiedField === t.id ? <Check size={12} className="text-success" /> : <Copy size={12} />}
                       </button>
                       <button
                         onClick={() => deleteToken(t.id)}
                         className="text-muted hover:text-danger p-1"
-                        title="Eliminar token"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   ))}
-                </div>
-              )}
-            </div>
-
-            {tokens.length > 0 && (
-              <>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">URL del endpoint</p>
-                  <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
-                    <code className="text-xs flex-1 truncate text-foreground">{apiUrl}</code>
-                    <button
-                      onClick={() => copyToClipboard(apiUrl, 'url')}
-                      className="text-muted hover:text-accent p-1"
-                    >
-                      {copiedField === 'url' ? <Check size={14} className="text-success" /> : <Copy size={14} />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-3">
-                  <p className="text-sm font-semibold text-accent">Configurar en tu iPhone</p>
-                  <ol className="text-sm text-foreground space-y-2 list-decimal list-inside">
-                    <li>Abre la app <strong>Atajos</strong> en tu iPhone</li>
-                    <li>Ve a la pestaña <strong>Automatización</strong></li>
-                    <li>Toca <strong>+</strong> y busca <strong>&quot;Transacción&quot;</strong></li>
-                    <li>Selecciona <strong>&quot;Se completa una transacción con Apple Pay&quot;</strong></li>
-                    <li>En la accion, elige <strong>&quot;Obtener contenido de la URL&quot;</strong></li>
-                    <li>Pega la URL del endpoint (copiala arriba)</li>
-                    <li>Cambia el metodo a <strong>POST</strong></li>
-                    <li>En <strong>Encabezados</strong>, agrega:
-                      <br /><code className="text-xs bg-white px-1 py-0.5 rounded">Authorization</code> = <code className="text-xs bg-white px-1 py-0.5 rounded">Bearer TU_TOKEN</code>
-                    </li>
-                    <li>En <strong>Cuerpo</strong> elige JSON y agrega:
-                      <div className="bg-white rounded-lg p-2 mt-1 text-xs font-mono">
-                        {`{`}<br />
-                        &nbsp;&nbsp;{`"amount": `}<span className="text-accent">Monto de la transaccion</span>{`,`}<br />
-                        &nbsp;&nbsp;{`"merchant": `}<span className="text-accent">Nombre del comercio</span><br />
-                        {`}`}
-                      </div>
-                    </li>
-                    <li>Los campos <strong>Monto</strong> y <strong>Nombre del comercio</strong> son variables magicas que Atajos te ofrece al seleccionar la automatizacion de transaccion</li>
-                  </ol>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
-                  Cada gasto registrado se categoriza automaticamente con IA. Si necesitas ajustar la categoria, puedes editarlo desde la app.
                 </div>
               </>
             )}
@@ -392,6 +476,22 @@ export default function ConfiguracionPage() {
         }}
         onCancel={() => setShowLogout(false)}
       />
+    </div>
+  )
+}
+
+function CopyField({ label, value, copied, onCopy }: { label: string; value: string; copied: boolean; onCopy: () => void }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-[10px] text-muted font-medium uppercase tracking-wide">{label}</p>
+      <button
+        type="button"
+        onClick={onCopy}
+        className="w-full flex items-center gap-2 bg-white border border-border rounded-lg px-3 py-2 text-left hover:border-accent transition-colors group"
+      >
+        <code className="text-xs flex-1 truncate text-foreground">{value}</code>
+        {copied ? <Check size={14} className="shrink-0 text-success" /> : <Copy size={14} className="shrink-0 text-muted group-hover:text-accent" />}
+      </button>
     </div>
   )
 }
