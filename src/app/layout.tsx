@@ -19,6 +19,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'Nummo',
   },
+  other: {
+    'theme-color': '#0F172A',
+  },
 }
 
 export default function RootLayout({
