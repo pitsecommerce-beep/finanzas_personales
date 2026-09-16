@@ -3,20 +3,29 @@
 import { useState } from 'react'
 import { Plus, Trash2, Check, ArrowDownLeft, ArrowUpRight, CalendarDays, Pencil } from 'lucide-react'
 import { useAccounts } from '@/lib/hooks/use-accounts'
+import { useCards } from '@/lib/hooks/use-cards'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Modal } from '@/components/ui/modal'
+import { Select } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { createClient } from '@/lib/supabase/client'
 import type { Account, AccountType } from '@/types/database'
 
 export default function CuentasPage() {
   const { accounts, loading, addAccount, updateAccount, deleteAccount } = useAccounts()
+  const { cards } = useCards()
   const { toast } = useToast()
   const [showForm, setShowForm] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [filter, setFilter] = useState<'all' | 'receivable' | 'payable'>('all')
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [payAccount, setPayAccount] = useState<Account | null>(null)
+  const [selectedCardId, setSelectedCardId] = useState('')
+  const [payLoading, setPayLoading] = useState(false)
 
   const emptyForm = {
     type: 'receivable' as AccountType,
@@ -89,11 +98,50 @@ export default function CuentasPage() {
     }
   }
 
-  async function togglePaid(id: string, currentValue: boolean) {
-    const result = await updateAccount(id, { is_paid: !currentValue })
+  function handleTogglePaid(account: Account) {
+    if (account.is_paid) {
+      updateAccount(account.id, { is_paid: false })
+      return
+    }
+    setPayAccount(account)
+    setSelectedCardId('')
+  }
+
+  async function confirmPay() {
+    if (!payAccount) return
+    setPayLoading(true)
+
+    const result = await updateAccount(payAccount.id, { is_paid: true })
     if (result && 'error' in result && result.error) {
       toast('Error al actualizar', 'error')
+      setPayLoading(false)
+      return
     }
+
+    if (selectedCardId) {
+      const supabase = createClient()
+      const card = cards.find(c => c.id === selectedCardId)
+      if (card) {
+        const amount = Number(payAccount.amount)
+        if (payAccount.type === 'receivable') {
+          const newBalance = (card.balance ?? 0) + amount
+          await supabase.from('cards').update({ balance: newBalance }).eq('id', selectedCardId)
+        } else {
+          if (card.card_type === 'credit') {
+            const newUsed = (card.used_credit ?? 0) + amount
+            await supabase.from('cards').update({ used_credit: newUsed }).eq('id', selectedCardId)
+          } else {
+            const newBalance = (card.balance ?? 0) - amount
+            await supabase.from('cards').update({ balance: newBalance }).eq('id', selectedCardId)
+          }
+        }
+      }
+    }
+
+    const label = payAccount.type === 'receivable' ? 'Cobro registrado' : 'Pago registrado'
+    toast(label, 'success')
+    setPayAccount(null)
+    setPayLoading(false)
   }
 
   function handleDelete(id: string) {
@@ -118,6 +166,10 @@ export default function CuentasPage() {
 
   const totalReceivable = accounts.filter((a) => a.type === 'receivable' && !a.is_paid).reduce((s, a) => s + Number(a.amount), 0)
   const totalPayable = accounts.filter((a) => a.type === 'payable' && !a.is_paid).reduce((s, a) => s + Number(a.amount), 0)
+
+  const cardOptions = payAccount?.type === 'receivable'
+    ? cards.filter(c => c.card_type !== 'credit').map(c => ({ value: c.id, label: `${c.alias} (${c.bank_name})` }))
+    : cards.map(c => ({ value: c.id, label: `${c.alias} (${c.bank_name})` }))
 
   if (loading) {
     return (
@@ -267,7 +319,7 @@ export default function CuentasPage() {
             }`}
           >
             <button
-              onClick={() => togglePaid(account.id, account.is_paid)}
+              onClick={() => handleTogglePaid(account)}
               className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition ${
                 account.is_paid
                   ? 'bg-success border-success text-white'
@@ -320,6 +372,53 @@ export default function CuentasPage() {
           </div>
         ))}
       </div>
+
+      <Modal
+        open={!!payAccount}
+        onClose={() => setPayAccount(null)}
+        title={payAccount?.type === 'receivable' ? 'Registrar cobro' : 'Registrar pago'}
+      >
+        {payAccount && (
+          <div className="space-y-4">
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-sm">
+                <span className="font-medium">{payAccount.person_name}</span>
+                {payAccount.description && <span className="text-muted"> - {payAccount.description}</span>}
+              </p>
+              <p className={`text-lg font-bold mt-1 ${payAccount.type === 'receivable' ? 'text-success' : 'text-danger'}`}>
+                {formatMXN(Number(payAccount.amount))}
+              </p>
+            </div>
+
+            <Select
+              id="payCard"
+              label={payAccount.type === 'receivable' ? '¿A qué cuenta se depositó?' : '¿De qué cuenta se pagó?'}
+              value={selectedCardId}
+              onChange={(e) => setSelectedCardId(e.target.value)}
+              options={cardOptions}
+              placeholder="Selecciona una cuenta"
+            />
+
+            <p className="text-xs text-muted">
+              {payAccount.type === 'receivable'
+                ? 'Se sumará el monto al saldo de la cuenta seleccionada.'
+                : 'Se descontará el monto del saldo de la cuenta seleccionada.'}
+            </p>
+
+            <div className="flex gap-2">
+              <Button onClick={confirmPay} loading={payLoading} className="flex-1">
+                {payAccount.type === 'receivable' ? 'Confirmar cobro' : 'Confirmar pago'}
+              </Button>
+              <button
+                onClick={() => setPayAccount(null)}
+                className="px-4 py-2 rounded-lg text-sm text-muted hover:bg-gray-50 transition"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <ConfirmDialog
         open={!!deleteId}
