@@ -92,12 +92,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
       cardData.last_yield_date = card?.last_yield_date ?? today
       cardData.yield_frequency = yieldFrequency
       cardData.money_availability = moneyAvailability
-      const bal = balance ? parseFloat(balance) : 0
-      if (bal > 25000 && yieldRateAbove) {
-        cardData.yield_rate_above_limit = parseFloat(yieldRateAbove)
-      } else {
-        cardData.yield_rate_above_limit = null
-      }
+      cardData.yield_rate_above_limit = yieldRateAbove ? parseFloat(yieldRateAbove) : null
     } else {
       cardData.has_yields = false
       cardData.yield_rate = null
@@ -289,20 +284,19 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
 
       {cardType === 'savings' && (
         <>
-          <Input
-            id="yieldRate"
-            label="Tasa anual (%) hasta $25,000"
-            type="number"
-            step="0.001"
-            min="0"
-            max="100"
-            value={yieldRate}
-            onChange={(e) => setYieldRate(e.target.value)}
-            placeholder="Ej: 15.0"
-            required
-          />
-
-          {balanceNum > 25000 && (
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              id="yieldRate"
+              label="Tasa anual (%) hasta $25,000"
+              type="number"
+              step="0.001"
+              min="0"
+              max="100"
+              value={yieldRate}
+              onChange={(e) => setYieldRate(e.target.value)}
+              placeholder="Ej: 15.0"
+              required
+            />
             <Input
               id="yieldRateAbove"
               label="Tasa anual (%) arriba de $25,000"
@@ -314,7 +308,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
               onChange={(e) => setYieldRateAbove(e.target.value)}
               placeholder="Ej: 4.0"
             />
-          )}
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Select
