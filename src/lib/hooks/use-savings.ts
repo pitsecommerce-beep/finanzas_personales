@@ -17,7 +17,7 @@ export function useSavings() {
       const supabase = createClient()
       const { data } = await supabase
         .from('savings_goals')
-        .select('*, card:cards(*), source_card:cards!savings_goals_source_card_id_fkey(*)')
+        .select('*, card:cards!savings_goals_card_id_fkey(*), source_card:cards!savings_goals_source_card_id_fkey(*)')
         .order('created_at', { ascending: false })
       setGoals(data ?? [])
     } catch (err) {
@@ -39,13 +39,17 @@ export function useSavings() {
     const { data, error } = await supabase
       .from('savings_goals')
       .insert({ ...goal, user_id: user.id })
-      .select('*, card:cards(*), source_card:cards!savings_goals_source_card_id_fkey(*)')
+      .select('*, card:cards!savings_goals_card_id_fkey(*), source_card:cards!savings_goals_source_card_id_fkey(*)')
       .single()
 
-    if (!error && data) {
+    if (error) {
+      console.error('[Nummo] Error al guardar meta:', error.message, error.details, error.hint)
+      return { data: null, error }
+    }
+    if (data) {
       setGoals((prev) => [data, ...prev])
     }
-    return { data, error }
+    return { data, error: null }
   }
 
   async function updateGoal(id: string, updates: Record<string, unknown>) {
@@ -55,7 +59,7 @@ export function useSavings() {
       .from('savings_goals')
       .update(updates)
       .eq('id', id)
-      .select('*, card:cards(*), source_card:cards!savings_goals_source_card_id_fkey(*)')
+      .select('*, card:cards!savings_goals_card_id_fkey(*), source_card:cards!savings_goals_source_card_id_fkey(*)')
       .single()
 
     if (!error && data) {
