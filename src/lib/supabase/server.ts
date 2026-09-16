@@ -10,7 +10,7 @@ export function isSupabaseConfigured(): boolean {
 
 export async function createClient() {
   if (!isSupabaseConfigured()) {
-    console.warn('[FinanzApp] Supabase no configurado. Funcionando sin base de datos.')
+    console.warn('[Nummo] Supabase no configurado. Funcionando sin base de datos.')
   }
 
   const cookieStore = await cookies()

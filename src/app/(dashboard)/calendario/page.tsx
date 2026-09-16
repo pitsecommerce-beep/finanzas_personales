@@ -15,7 +15,7 @@ export default function CalendarioPage() {
   useEffect(() => {
     async function load() {
       if (!isSupabaseConfigured()) {
-        console.warn('[FinanzApp] Calendario: sin conexión a BD')
+        console.warn('[Nummo] Calendario: sin conexión a BD')
         return
       }
       try {
@@ -27,7 +27,7 @@ export default function CalendarioPage() {
         setCards(c.data ?? [])
         setIncomeSources(i.data ?? [])
       } catch (err) {
-        console.warn('[FinanzApp] Error al cargar calendario:', err)
+        console.warn('[Nummo] Error al cargar calendario:', err)
       }
     }
     load()

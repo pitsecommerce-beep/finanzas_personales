@@ -11,7 +11,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         redirect('/login')
       }
     } catch {
-      console.warn('[FinanzApp] Error al verificar sesión. Continuando sin auth.')
+      console.warn('[Nummo] Error al verificar sesión. Continuando sin auth.')
     }
   }
 

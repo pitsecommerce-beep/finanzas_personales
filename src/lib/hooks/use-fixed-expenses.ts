@@ -10,7 +10,7 @@ export function useFixedExpenses() {
 
   const fetchExpenses = useCallback(async () => {
     if (!isSupabaseConfigured()) {
-      console.warn('[FinanzApp] Gastos fijos: sin conexión a BD')
+      console.warn('[Nummo] Gastos fijos: sin conexión a BD')
       setLoading(false)
       return
     }
@@ -22,7 +22,7 @@ export function useFixedExpenses() {
         .order('created_at', { ascending: false })
       setExpenses(data ?? [])
     } catch (err) {
-      console.warn('[FinanzApp] Error al cargar gastos fijos:', err)
+      console.warn('[Nummo] Error al cargar gastos fijos:', err)
     }
     setLoading(false)
   }, [])

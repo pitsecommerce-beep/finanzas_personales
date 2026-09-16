@@ -49,7 +49,10 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-primary text-white min-h-screen">
       <div className="p-6">
-        <h1 className="text-xl font-bold text-accent">FinanzApp</h1>
+        <div className="flex items-center gap-2">
+          <img src="/logo.svg" alt="Nummo" className="h-8 w-8 rounded-lg" />
+          <h1 className="text-xl font-bold text-accent">Nummo</h1>
+        </div>
         {firstName ? (
           <p className="text-xs text-gray-400 mt-1">Hola, {firstName}</p>
         ) : (

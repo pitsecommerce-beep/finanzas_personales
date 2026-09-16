@@ -10,7 +10,7 @@ export function useIncome() {
 
   const fetchSources = useCallback(async () => {
     if (!isSupabaseConfigured()) {
-      console.warn('[FinanzApp] Ingresos: sin conexión a BD')
+      console.warn('[Nummo] Ingresos: sin conexión a BD')
       setLoading(false)
       return
     }
@@ -22,7 +22,7 @@ export function useIncome() {
         .order('created_at', { ascending: false })
       setSources(data ?? [])
     } catch (err) {
-      console.warn('[FinanzApp] Error al cargar ingresos:', err)
+      console.warn('[Nummo] Error al cargar ingresos:', err)
     }
     setLoading(false)
   }, [])

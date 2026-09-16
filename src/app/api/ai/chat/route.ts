@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       supabase.from('income_sources').select('*').eq('user_id', user.id),
     ])
   } catch (err) {
-    console.warn('[FinanzApp] Error al cargar datos para IA:', err)
+    console.warn('[Nummo] Error al cargar datos para IA:', err)
     return NextResponse.json({ error: 'Error al cargar datos financieros' }, { status: 500 })
   }
 

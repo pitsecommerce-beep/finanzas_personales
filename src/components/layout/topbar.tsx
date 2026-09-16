@@ -37,7 +37,10 @@ export function Topbar() {
     <header className="lg:hidden bg-primary text-white">
       <div className="flex items-center justify-between px-4 py-3">
         <div>
-          <h1 className="text-lg font-bold text-accent">FinanzApp</h1>
+          <div className="flex items-center gap-2">
+            <img src="/logo.svg" alt="Nummo" className="h-7 w-7 rounded-md" />
+            <h1 className="text-lg font-bold text-accent">Nummo</h1>
+          </div>
           {firstName && <p className="text-[10px] text-gray-400 -mt-0.5">Hola, {firstName}</p>}
         </div>
         <button onClick={() => setMenuOpen(!menuOpen)} className="p-1">

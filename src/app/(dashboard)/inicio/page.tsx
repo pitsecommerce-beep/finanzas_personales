@@ -19,7 +19,7 @@ export default function InicioPage() {
   useEffect(() => {
     async function load() {
       if (!isSupabaseConfigured()) {
-        console.warn('[FinanzApp] Inicio: sin conexión a BD')
+        console.warn('[Nummo] Inicio: sin conexión a BD')
         setLoading(false)
         return
       }
@@ -40,7 +40,7 @@ export default function InicioPage() {
         setTransactions(txRes.data ?? [])
         setCards(cardRes.data ?? [])
       } catch (err) {
-        console.warn('[FinanzApp] Error al cargar datos de inicio:', err)
+        console.warn('[Nummo] Error al cargar datos de inicio:', err)
       }
       setLoading(false)
     }
