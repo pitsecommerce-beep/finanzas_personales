@@ -10,5 +10,5 @@ export const CARD_COLORS = [
   { value: '#6366F1', label: 'Índigo' },
   { value: '#1E293B', label: 'Grafito' },
   { value: '#EAB308', label: 'Amarillo' },
-  { value: '#F8FAFC', label: 'Blanco' },
+  { value: '#F5F0E8', label: 'Hueso' },
 ] as const

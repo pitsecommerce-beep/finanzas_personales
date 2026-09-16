@@ -30,7 +30,7 @@ function getIcon(type: string) {
 
 export function CardItem({ card, onEdit, onDelete }: CardItemProps) {
   const Icon = getIcon(card.card_type)
-  const isLight = card.color === '#F8FAFC' || card.color === '#EAB308'
+  const isLight = card.color === '#F5F0E8'
   const textClass = isLight ? 'text-gray-800' : 'text-white'
   const subtextClass = isLight ? 'text-gray-500' : 'text-white/60'
   const dotClass = isLight ? 'text-gray-800' : 'text-white'
