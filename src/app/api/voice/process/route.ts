@@ -355,15 +355,20 @@ async function callClaude(apiKey: string, system: string, messages: unknown[]) {
     messages,
   }
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-api-key': apiKey,
+    'anthropic-version': '2023-06-01',
+  }
+  if (process.env.ANTHROPIC_WORKSPACE_ID) {
+    headers['anthropic-workspace-id'] = process.env.ANTHROPIC_WORKSPACE_ID
+  }
+
   let res: Response
   try {
     res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
+      headers,
       body: JSON.stringify(body),
     })
   } catch (fetchErr) {
