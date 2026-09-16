@@ -38,7 +38,7 @@ export async function middleware(request: NextRequest) {
     const { data } = await supabase.auth.getUser()
     user = data.user
   } catch {
-    console.warn('[FinanzApp] No se pudo verificar la sesión del usuario')
+    console.warn('[Nummo] No se pudo verificar la sesión del usuario')
   }
 
   const isAuthPage = (request.nextUrl.pathname.startsWith('/login') ||

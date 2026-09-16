@@ -9,7 +9,7 @@ export function isSupabaseConfigured(): boolean {
 
 export function createClient() {
   if (!isSupabaseConfigured()) {
-    console.warn('[FinanzApp] Supabase no configurado. La app funcionará en modo local sin persistencia.')
+    console.warn('[Nummo] Supabase no configurado. La app funcionará en modo local sin persistencia.')
   }
   return createBrowserClient(
     supabaseUrl || 'https://placeholder.supabase.co',

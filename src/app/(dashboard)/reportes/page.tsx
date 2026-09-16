@@ -19,7 +19,7 @@ export default function ReportesPage() {
   useEffect(() => {
     async function load() {
       if (!isSupabaseConfigured()) {
-        console.warn('[FinanzApp] Reportes: sin conexión a BD')
+        console.warn('[Nummo] Reportes: sin conexión a BD')
         setLoading(false)
         return
       }
@@ -53,7 +53,7 @@ export default function ReportesPage() {
         setTransactions(filtered.data ?? [])
         setAllTransactions(all.data ?? [])
       } catch (err) {
-        console.warn('[FinanzApp] Error al cargar reportes:', err)
+        console.warn('[Nummo] Error al cargar reportes:', err)
       }
       setLoading(false)
     }

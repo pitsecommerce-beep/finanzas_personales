@@ -10,7 +10,7 @@ export function useCards() {
 
   const fetchCards = useCallback(async () => {
     if (!isSupabaseConfigured()) {
-      console.warn('[FinanzApp] Tarjetas: sin conexión a BD')
+      console.warn('[Nummo] Tarjetas: sin conexión a BD')
       setLoading(false)
       return
     }
@@ -22,7 +22,7 @@ export function useCards() {
         .order('created_at', { ascending: false })
       setCards(data ?? [])
     } catch (err) {
-      console.warn('[FinanzApp] Error al cargar tarjetas:', err)
+      console.warn('[Nummo] Error al cargar tarjetas:', err)
     }
     setLoading(false)
   }, [])

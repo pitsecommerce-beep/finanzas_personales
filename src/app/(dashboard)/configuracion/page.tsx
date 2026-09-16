@@ -18,7 +18,7 @@ export default function ConfiguracionPage() {
   useEffect(() => {
     async function load() {
       if (!isSupabaseConfigured()) {
-        console.warn('[FinanzApp] Configuración: sin conexión a BD')
+        console.warn('[Nummo] Configuración: sin conexión a BD')
         setLoadingData(false)
         return
       }
@@ -38,7 +38,7 @@ export default function ConfiguracionPage() {
           setModel(data.model)
         }
       } catch (err) {
-        console.warn('[FinanzApp] Error al cargar configuración:', err)
+        console.warn('[Nummo] Error al cargar configuración:', err)
       }
       setLoadingData(false)
     }

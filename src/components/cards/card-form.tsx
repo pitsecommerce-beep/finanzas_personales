@@ -76,7 +76,7 @@ export function CardForm({ onSuccess }: CardFormProps) {
       />
 
       <div className="space-y-1">
-        <label className="block text-sm font-medium text-foreground">Tipo de tarjeta<span className="text-danger ml-0.5">*</span></label>
+        <label className="block text-sm font-medium text-foreground">Tipo de tarjeta<span className="ml-0.5">*</span></label>
         <div className="flex gap-2">
           {(['credit', 'debit'] as const).map((t) => (
             <button

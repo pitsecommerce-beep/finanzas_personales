@@ -18,7 +18,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
 
   const fetchTransactions = useCallback(async () => {
     if (!isSupabaseConfigured()) {
-      console.warn('[FinanzApp] Transacciones: sin conexión a BD')
+      console.warn('[Nummo] Transacciones: sin conexión a BD')
       setLoading(false)
       return
     }
@@ -38,7 +38,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       const { data } = await query
       setTransactions(data ?? [])
     } catch (err) {
-      console.warn('[FinanzApp] Error al cargar transacciones:', err)
+      console.warn('[Nummo] Error al cargar transacciones:', err)
     }
     setLoading(false)
   }, [options.type, options.cardId, options.startDate, options.endDate, options.category])

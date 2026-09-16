@@ -10,7 +10,7 @@ export function useAccounts() {
 
   const fetchAccounts = useCallback(async () => {
     if (!isSupabaseConfigured()) {
-      console.warn('[FinanzApp] Cuentas: sin conexión a BD')
+      console.warn('[Nummo] Cuentas: sin conexión a BD')
       setLoading(false)
       return
     }
@@ -22,7 +22,7 @@ export function useAccounts() {
         .order('due_date', { ascending: true, nullsFirst: false })
       setAccounts(data ?? [])
     } catch (err) {
-      console.warn('[FinanzApp] Error al cargar cuentas:', err)
+      console.warn('[Nummo] Error al cargar cuentas:', err)
     }
     setLoading(false)
   }, [])

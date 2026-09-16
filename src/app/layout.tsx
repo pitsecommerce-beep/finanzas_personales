@@ -8,7 +8,7 @@ const geistSans = Geist({
 })
 
 export const metadata: Metadata = {
-  title: 'FinanzApp - Control de Finanzas Personales',
+  title: 'Nummo - Control de Finanzas Personales',
   description: 'Gestiona tus finanzas personales, tarjetas, gastos e ingresos de forma inteligente.',
 }
 
