@@ -59,7 +59,7 @@ interface MonthData {
   sporadicIncome: { category: string; amount: number }[]
   receivables: { person: string; amount: number }[]
   fixedExpenses: { description: string; amount: number }[]
-  sporadicExpenses: { category: string; amount: number }[]
+  sporadicExpenses: { description: string; category: string; amount: number }[]
   payables: { person: string; amount: number }[]
   totalIncome: number
   totalExpense: number
@@ -155,18 +155,32 @@ export default function PylPage() {
       })
       .map(a => ({ person: a.person_name, amount: a.amount }))
 
-    const feList = fixedExpenses.map(fe => ({
-      description: fe.description, amount: Number(fe.monthly_amount),
-    }))
+    const feList = fixedExpenses
+      .filter(fe => {
+        const feStart = startOfMonth(new Date(fe.start_date + 'T12:00:00'))
+        if (isAfter(feStart, mEnd)) return false
+        if (fe.is_msi && fe.total_months > 1) {
+          const feExpiry = endOfMonth(addMonths(feStart, fe.total_months - 1))
+          if (isBefore(feExpiry, mStart)) return false
+        }
+        if (!fe.is_msi && fe.end_date) {
+          const feEnd = new Date(fe.end_date + 'T12:00:00')
+          if (isBefore(feEnd, mStart)) return false
+        }
+        return true
+      })
+      .map(fe => ({
+        description: fe.description, amount: Number(fe.monthly_amount),
+      }))
 
-    const expenseByCategory: Record<string, number> = {}
-    monthTx.filter(t => t.type === 'expense').forEach(t => {
-      const cat = t.category || 'otros'
-      expenseByCategory[cat] = (expenseByCategory[cat] || 0) + Number(t.amount)
-    })
-    const sporadicExpenses = Object.entries(expenseByCategory).map(([cat, amount]) => ({
-      category: CATEGORY_LABELS[cat] || cat, amount,
-    })).sort((a, b) => b.amount - a.amount)
+    const sporadicExpenses = monthTx
+      .filter(t => t.type === 'expense')
+      .map(t => ({
+        description: t.description,
+        category: CATEGORY_LABELS[t.category] || t.category || 'Otros',
+        amount: Number(t.amount),
+      }))
+      .sort((a, b) => b.amount - a.amount)
 
     const payables = accounts
       .filter(a => a.type === 'payable' && a.due_date)
@@ -338,7 +352,7 @@ function SingleMonthView({ data }: { data: MonthData }) {
       <Section title="Ingresos esporádicos" color="success" items={data.sporadicIncome.map(r => ({ label: r.category, amount: r.amount }))} emptyText="Sin ingresos esporádicos" />
       <Section title="Cuentas por cobrar" color="success" items={data.receivables.map(r => ({ label: r.person, amount: r.amount }))} emptyText="Sin cuentas por cobrar" />
       <Section title="Gastos fijos" color="danger" items={data.fixedExpenses.map(r => ({ label: r.description, amount: r.amount }))} />
-      <Section title="Gastos esporádicos" color="danger" items={data.sporadicExpenses.map(r => ({ label: r.category, amount: r.amount }))} emptyText="Sin gastos esporádicos" />
+      <Section title="Gastos esporádicos" color="danger" items={data.sporadicExpenses.map(r => ({ label: r.description, amount: r.amount }))} emptyText="Sin gastos esporádicos" />
       <Section title="Cuentas por pagar" color="danger" items={data.payables.map(r => ({ label: r.person, amount: r.amount }))} emptyText="Sin cuentas por pagar" />
 
       <div className={`rounded-xl border p-4 ${net >= 0 ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}>
@@ -415,7 +429,7 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
   const allFixedIncome = [...new Set(monthsData.flatMap(md => md.data.fixedIncome.map(r => r.description)))]
   const allFixedExpenses = [...new Set(monthsData.flatMap(md => md.data.fixedExpenses.map(r => r.description)))]
   const allSporadicIncome = [...new Set(monthsData.flatMap(md => md.data.sporadicIncome.map(r => r.category)))]
-  const allSporadicExpenses = [...new Set(monthsData.flatMap(md => md.data.sporadicExpenses.map(r => r.category)))]
+  const sporadicExpenseCategories = [...new Set(monthsData.flatMap(md => md.data.sporadicExpenses.map(r => r.category)))]
   const allReceivables = [...new Set(monthsData.flatMap(md => md.data.receivables.map(r => r.person)))]
   const allPayables = [...new Set(monthsData.flatMap(md => md.data.payables.map(r => r.person)))]
   const allCards = [...new Set(monthsData.flatMap(md => md.data.cardProjections.map(cp => cp.card.id)))]
@@ -489,12 +503,12 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
             md.data.fixedExpenses.reduce((s, r) => s + r.amount, 0)
           )} color="danger" />
 
-          {allSporadicExpenses.length > 0 && (
+          {sporadicExpenseCategories.length > 0 && (
             <>
               <GroupHeader label="Gastos esporádicos" color="danger" colSpan={monthsData.length + 1} />
-              {allSporadicExpenses.map(cat => (
+              {sporadicExpenseCategories.map(cat => (
                 <DataRow key={cat} label={cat} values={monthsData.map(md =>
-                  md.data.sporadicExpenses.find(r => r.category === cat)?.amount ?? 0
+                  md.data.sporadicExpenses.filter(r => r.category === cat).reduce((s, r) => s + r.amount, 0)
                 )} color="danger" now={now} months={monthsData.map(m => m.month)} />
               ))}
               <TotalRow label="Subtotal" values={monthsData.map(md =>

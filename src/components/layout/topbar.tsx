@@ -5,7 +5,6 @@ import { Menu, X, LogOut } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useProfileContext } from '@/lib/context/profile-context'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 const links = [
@@ -25,7 +24,6 @@ export function Topbar() {
   const [showLogout, setShowLogout] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
-  const { firstName } = useProfileContext()
 
   async function handleLogout() {
     const supabase = createClient()
@@ -41,7 +39,7 @@ export function Topbar() {
             <img src="/favicon_nummo.png" alt="Nummo" className="h-7 w-7 rounded-md" />
             <h1 className="text-lg font-bold text-accent">Nummo</h1>
           </div>
-          {firstName && <p className="text-[10px] text-gray-400 -mt-0.5">Hola, {firstName}</p>}
+          <p className="text-[10px] text-gray-400 -mt-0.5">Control financiero inteligente</p>
         </div>
         <button onClick={() => setMenuOpen(!menuOpen)} className="p-1">
           {menuOpen ? <X size={24} /> : <Menu size={24} />}
