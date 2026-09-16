@@ -10,8 +10,8 @@ export interface Card {
   alias: string
   card_type: CardType
   last_four_digits: string | null
-  cut_off_day: number
-  payment_day: number
+  cut_off_day: number | null
+  payment_day: number | null
   credit_limit: number | null
   color: string
   created_at: string

@@ -1,5 +1,19 @@
-import { format, lastDayOfMonth, setDate, addMonths, subMonths, isAfter, isBefore, startOfDay } from 'date-fns'
+import { format, lastDayOfMonth, setDate, addMonths, subMonths, isAfter, isBefore, startOfDay, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
+
+export function toNextBusinessDay(date: Date): Date {
+  const dow = date.getDay()
+  if (dow === 6) return addDays(date, 2)
+  if (dow === 0) return addDays(date, 1)
+  return date
+}
+
+export function adjustDateToBusinessDay(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  const adjusted = toNextBusinessDay(date)
+  return format(adjusted, 'yyyy-MM-dd')
+}
 
 export function clampDay(day: number, date: Date): Date {
   const lastDay = lastDayOfMonth(date).getDate()
@@ -19,12 +33,12 @@ export function getNextCutOffDate(cutOffDay: number): Date {
 
 export function getNextPaymentDate(paymentDay: number): Date {
   const today = startOfDay(new Date())
-  const thisMonth = clampDay(paymentDay, today)
+  const thisMonth = toNextBusinessDay(clampDay(paymentDay, today))
 
   if (isAfter(thisMonth, today) || thisMonth.getTime() === today.getTime()) {
     return thisMonth
   }
-  return clampDay(paymentDay, addMonths(today, 1))
+  return toNextBusinessDay(clampDay(paymentDay, addMonths(today, 1)))
 }
 
 export function getBillingPeriod(cutOffDay: number): { start: Date; end: Date } {

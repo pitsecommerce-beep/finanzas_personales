@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { clampDay, toNextBusinessDay } from '@/lib/utils/dates'
 import type { Card, IncomeSource } from '@/types/database'
 
 export default function CalendarioPage() {
@@ -42,12 +43,19 @@ export default function CalendarioPage() {
     const events: { label: string; color: string; type: string }[] = []
     const dayNum = day.getDate()
 
+    const monthRef = new Date(day.getFullYear(), day.getMonth(), 1)
+    const prevMonthRef = subMonths(monthRef, 1)
+
     cards.forEach((card) => {
-      if (card.cut_off_day === dayNum) {
+      if (card.cut_off_day != null && card.cut_off_day === dayNum) {
         events.push({ label: `Corte ${card.alias}`, color: '#F59E0B', type: 'cutoff' })
       }
-      if (card.payment_day === dayNum) {
-        events.push({ label: `Pago ${card.alias}`, color: '#EF4444', type: 'payment' })
+      if (card.payment_day != null) {
+        const adjusted = toNextBusinessDay(clampDay(card.payment_day, monthRef))
+        const adjustedPrev = toNextBusinessDay(clampDay(card.payment_day, prevMonthRef))
+        if (isSameDay(adjusted, day) || isSameDay(adjustedPrev, day)) {
+          events.push({ label: `Pago ${card.alias}`, color: '#EF4444', type: 'payment' })
+        }
       }
     })
 
