@@ -86,7 +86,9 @@ export function TransactionForm({ type, transaction, onSuccess }: TransactionFor
     setLoading(false)
 
     if (result?.error) {
-      toast('Error al guardar', 'error')
+      const msg = result.error.message || 'Error al guardar'
+      console.error('[Nummo] Error transaccion:', result.error)
+      toast(msg, 'error')
       return
     }
 

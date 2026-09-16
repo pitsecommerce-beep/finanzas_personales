@@ -35,20 +35,28 @@ export function useFixedExpenses() {
     expense: Record<string, unknown>
   ) {
     if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return { data: null, error: { message: 'No autenticado' } }
 
-    const { data, error } = await supabase
-      .from('fixed_expenses')
-      .insert({ ...expense, user_id: user.id })
-      .select('*, card:cards(*)')
-      .single()
+      const { data, error } = await supabase
+        .from('fixed_expenses')
+        .insert({ ...expense, user_id: user.id })
+        .select('*, card:cards(*)')
+        .single()
 
-    if (!error && data) {
-      setExpenses((prev) => [data, ...prev])
+      if (error) {
+        console.error('[Nummo] Error al insertar gasto fijo:', error.message, error.details, error.hint)
+        return { data: null, error }
+      }
+
+      if (data) setExpenses((prev) => [data, ...prev])
+      return { data, error: null }
+    } catch (err) {
+      console.error('[Nummo] Error inesperado gasto fijo:', err)
+      return { data: null, error: { message: String(err) } }
     }
-    return { data, error }
   }
 
   async function deleteExpense(id: string) {

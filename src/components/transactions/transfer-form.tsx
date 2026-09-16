@@ -44,7 +44,7 @@ export function TransferForm({ onSuccess }: TransferFormProps) {
     e.preventDefault()
     const numAmount = parseFloat(amount)
     if (!numAmount || numAmount <= 0) {
-      toast('Ingresa un monto valido', 'error')
+      toast('Ingresa un monto válido', 'error')
       return
     }
     if (!fromCardId || !toCardId) {

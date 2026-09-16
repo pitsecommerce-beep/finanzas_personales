@@ -27,6 +27,7 @@ export default function AhorroPage() {
   const [description, setDescription] = useState('')
   const [monthlyAmount, setMonthlyAmount] = useState('')
   const [targetAmount, setTargetAmount] = useState('')
+  const [sourceCardId, setSourceCardId] = useState<string | null>(null)
   const [cardId, setCardId] = useState<string | null>(null)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -35,6 +36,7 @@ export default function AhorroPage() {
     setDescription('')
     setMonthlyAmount('')
     setTargetAmount('')
+    setSourceCardId(null)
     setCardId(null)
     setStartDate(new Date().toISOString().split('T')[0])
     setEndDate('')
@@ -45,6 +47,7 @@ export default function AhorroPage() {
     setDescription(goal.description)
     setMonthlyAmount(goal.monthly_amount.toString())
     setTargetAmount(goal.target_amount?.toString() ?? '')
+    setSourceCardId(goal.source_card_id)
     setCardId(goal.card_id)
     setStartDate(goal.start_date ?? '')
     setEndDate(goal.end_date ?? '')
@@ -62,6 +65,7 @@ export default function AhorroPage() {
       description,
       monthly_amount: parseFloat(monthlyAmount),
       target_amount: targetAmount ? parseFloat(targetAmount) : null,
+      source_card_id: sourceCardId,
       card_id: cardId,
       start_date: startDate || null,
       end_date: endDate || null,
@@ -124,7 +128,7 @@ export default function AhorroPage() {
       {goals.length === 0 ? (
         <div className="text-center py-16 text-muted">
           <PiggyBank size={48} className="mx-auto mb-3 text-accent/40" />
-          <p className="text-sm mb-4">Configura cuanto ahorraras cada mes y hacia donde va ese dinero</p>
+          <p className="text-sm mb-4">Configura cuánto ahorrarás cada mes y hacia dónde va ese dinero</p>
           <Button onClick={openCreate}>Crear meta</Button>
         </div>
       ) : (
@@ -135,7 +139,8 @@ export default function AhorroPage() {
                 <div>
                   <p className="font-semibold">{g.description}</p>
                   <p className="text-xs text-muted">
-                    {g.card?.alias ? `Destino: ${g.card.alias}` : 'Sin cuenta asignada'}
+                    {g.source_card?.alias ? `Origen: ${g.source_card.alias}` : 'Sin cuenta origen'}
+                    {g.card?.alias ? ` → Destino: ${g.card.alias}` : ''}
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
@@ -175,7 +180,7 @@ export default function AhorroPage() {
       )}
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800">
-        El dinero asignado a metas de ahorro permanece en tu cuenta pero se considera no disponible para gastos. Si un gasto consume ese dinero, recibiras una alerta.
+        El dinero asignado a metas de ahorro permanece en tu cuenta pero se considera no disponible para gastos. Si un gasto consume ese dinero, recibirás una alerta.
       </div>
 
       <Modal open={showForm || !!editingGoal} onClose={closeForm} title={editingGoal ? 'Editar meta de ahorro' : 'Nueva meta de ahorro'}>
@@ -221,11 +226,27 @@ export default function AhorroPage() {
           </div>
           <CardSelector
             cards={cards}
+            value={sourceCardId}
+            onChange={setSourceCardId}
+            label="Cuenta origen *"
+          />
+          <CardSelector
+            cards={cards.filter(c => c.id !== sourceCardId)}
             value={cardId}
             onChange={setCardId}
-            label="Cuenta destino"
+            label="Cuenta destino (opcional)"
             filterTypes={['debit', 'savings']}
           />
+          {cardId && (
+            <div className="bg-accent/10 border border-accent/20 rounded-lg px-3 py-2 text-xs text-accent">
+              Se programará un traspaso automático de la cuenta origen a la cuenta destino en las fechas configuradas.
+            </div>
+          )}
+          {!cardId && sourceCardId && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-700">
+              El dinero se apartará dentro de la cuenta origen. Si gastas de ese apartado, recibirás una alerta.
+            </div>
+          )}
           <Button type="submit" className="w-full" size="lg">
             {editingGoal ? 'Guardar cambios' : 'Crear meta'}
           </Button>

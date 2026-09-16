@@ -17,7 +17,7 @@ export function useSavings() {
       const supabase = createClient()
       const { data } = await supabase
         .from('savings_goals')
-        .select('*, card:cards(*)')
+        .select('*, card:cards(*), source_card:cards!savings_goals_source_card_id_fkey(*)')
         .order('created_at', { ascending: false })
       setGoals(data ?? [])
     } catch (err) {
@@ -34,12 +34,12 @@ export function useSavings() {
     if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
+    if (!user) return { data: null, error: { message: 'No autenticado' } }
 
     const { data, error } = await supabase
       .from('savings_goals')
       .insert({ ...goal, user_id: user.id })
-      .select('*, card:cards(*)')
+      .select('*, card:cards(*), source_card:cards!savings_goals_source_card_id_fkey(*)')
       .single()
 
     if (!error && data) {
@@ -55,7 +55,7 @@ export function useSavings() {
       .from('savings_goals')
       .update(updates)
       .eq('id', id)
-      .select('*, card:cards(*)')
+      .select('*, card:cards(*), source_card:cards!savings_goals_source_card_id_fkey(*)')
       .single()
 
     if (!error && data) {

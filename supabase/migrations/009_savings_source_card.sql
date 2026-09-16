@@ -1,0 +1,1 @@
+ALTER TABLE savings_goals ADD COLUMN IF NOT EXISTS source_card_id UUID REFERENCES cards(id) ON DELETE SET NULL;

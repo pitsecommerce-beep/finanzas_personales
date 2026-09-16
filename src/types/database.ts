@@ -123,10 +123,12 @@ export interface SavingsGoal {
   description: string
   monthly_amount: number
   target_amount: number | null
+  source_card_id: string | null
   card_id: string | null
   is_active: boolean
   start_date: string | null
   end_date: string | null
   created_at: string
+  source_card?: Card
   card?: Card
 }

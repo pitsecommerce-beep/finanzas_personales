@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { useCards } from '@/lib/hooks/use-cards'
 import { CardItem } from '@/components/cards/card-item'
@@ -12,6 +13,7 @@ import { useToast } from '@/components/ui/toast'
 import type { Card } from '@/types/database'
 
 export default function TarjetasPage() {
+  const router = useRouter()
   const { cards, loading, deleteCard, refetch } = useCards()
   const [showForm, setShowForm] = useState(false)
   const [editingCard, setEditingCard] = useState<Card | null>(null)
@@ -64,7 +66,9 @@ export default function TarjetasPage() {
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
           {cards.map((card) => (
-            <CardItem key={card.id} card={card} onEdit={handleEdit} onDelete={(id) => setDeleteId(id)} />
+            <div key={card.id} onClick={() => router.push(`/tarjetas/${card.id}`)} className="cursor-pointer">
+              <CardItem card={card} onEdit={handleEdit} onDelete={(id) => setDeleteId(id)} />
+            </div>
           ))}
         </div>
       )}
