@@ -11,6 +11,7 @@ import { CurrencyInput } from '@/components/ui/currency-input'
 import { useExchangeRate } from '@/lib/hooks/use-exchange-rate'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
+import { todayMX } from '@/lib/utils/dates'
 import type { Transaction, TransactionType } from '@/types/database'
 
 interface TransactionFormProps {
@@ -24,7 +25,7 @@ export function TransactionForm({ type, transaction, onSuccess }: TransactionFor
   const [description, setDescription] = useState(transaction?.description ?? '')
   const [category, setCategory] = useState(transaction?.category ?? (type === 'expense' ? 'otros' : 'nomina'))
   const [cardId, setCardId] = useState<string | null>(transaction?.card_id ?? null)
-  const [date, setDate] = useState(transaction?.date ?? new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState(transaction?.date ?? todayMX())
   const [installmentMonths, setInstallmentMonths] = useState(transaction?.installment_months?.toString() ?? '')
   const [currency, setCurrency] = useState<'MXN' | 'USD'>((transaction?.currency as 'MXN' | 'USD') ?? 'MXN')
   const [loading, setLoading] = useState(false)

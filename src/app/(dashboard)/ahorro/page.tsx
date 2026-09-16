@@ -12,6 +12,7 @@ import { CurrencyInput } from '@/components/ui/currency-input'
 import { CardSelector } from '@/components/cards/card-selector'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
+import { todayMX } from '@/lib/utils/dates'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import type { SavingsGoal } from '@/types/database'
@@ -38,7 +39,7 @@ export default function AhorroPage() {
     setTargetAmount('')
     setSourceCardId(null)
     setCardId(null)
-    setStartDate(new Date().toISOString().split('T')[0])
+    setStartDate(todayMX())
     setEndDate('')
     setShowForm(true)
   }

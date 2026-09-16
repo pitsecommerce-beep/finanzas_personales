@@ -11,6 +11,7 @@ import { CurrencyInput } from '@/components/ui/currency-input'
 import { useExchangeRate } from '@/lib/hooks/use-exchange-rate'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
+import { todayMX } from '@/lib/utils/dates'
 import type { FixedExpense } from '@/types/database'
 
 interface FixedExpenseFormProps {
@@ -25,7 +26,7 @@ export function FixedExpenseForm({ expense, onSuccess }: FixedExpenseFormProps) 
   const [totalMonths, setTotalMonths] = useState(expense?.total_months?.toString() ?? '')
   const [monthlyAmount, setMonthlyAmount] = useState(expense?.monthly_amount?.toString() ?? '')
   const [cardId, setCardId] = useState<string | null>(expense?.card_id ?? null)
-  const [startDate, setStartDate] = useState(expense?.start_date ?? new Date().toISOString().split('T')[0])
+  const [startDate, setStartDate] = useState(expense?.start_date ?? todayMX())
   const [endDate, setEndDate] = useState(expense?.end_date ?? '')
   const [category, setCategory] = useState(expense?.category ?? 'otros')
   const [currency, setCurrency] = useState<'MXN' | 'USD'>((expense?.currency as 'MXN' | 'USD') ?? 'MXN')

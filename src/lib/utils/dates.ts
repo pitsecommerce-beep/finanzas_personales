@@ -1,6 +1,10 @@
 import { format, lastDayOfMonth, setDate, addMonths, subMonths, isAfter, isBefore, startOfDay, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 
+export function todayMX(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' })
+}
+
 export function toNextBusinessDay(date: Date): Date {
   const dow = date.getDay()
   if (dow === 6) return addDays(date, 2)

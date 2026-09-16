@@ -7,6 +7,7 @@ import { CurrencyInput } from '@/components/ui/currency-input'
 import { useCards } from '@/lib/hooks/use-cards'
 import { useTransactions } from '@/lib/hooks/use-transactions'
 import { useToast } from '@/components/ui/toast'
+import { todayMX } from '@/lib/utils/dates'
 import type { Card } from '@/types/database'
 
 interface TransferFormProps {
@@ -33,7 +34,7 @@ export function TransferForm({ onSuccess }: TransferFormProps) {
   const [toCardId, setToCardId] = useState<string>('')
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState(todayMX())
   const [loading, setLoading] = useState(false)
 
   const { cards } = useCards()
