@@ -11,24 +11,29 @@ import { CurrencyInput } from '@/components/ui/currency-input'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
 
+import type { FixedExpense } from '@/types/database'
+
 interface FixedExpenseFormProps {
+  expense?: FixedExpense
   onSuccess?: () => void
 }
 
-export function FixedExpenseForm({ onSuccess }: FixedExpenseFormProps) {
-  const [isMsi, setIsMsi] = useState(true)
-  const [description, setDescription] = useState('')
-  const [totalAmount, setTotalAmount] = useState('')
-  const [totalMonths, setTotalMonths] = useState('')
-  const [monthlyAmount, setMonthlyAmount] = useState('')
-  const [cardId, setCardId] = useState<string | null>(null)
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
-  const [endDate, setEndDate] = useState('')
-  const [category, setCategory] = useState('otros')
+export function FixedExpenseForm({ expense, onSuccess }: FixedExpenseFormProps) {
+  const [isMsi, setIsMsi] = useState(expense ? (expense.is_msi !== false && expense.total_months > 1) : true)
+  const [description, setDescription] = useState(expense?.description ?? '')
+  const [totalAmount, setTotalAmount] = useState(expense?.total_amount?.toString() ?? '')
+  const [totalMonths, setTotalMonths] = useState(expense?.total_months?.toString() ?? '')
+  const [monthlyAmount, setMonthlyAmount] = useState(expense?.monthly_amount?.toString() ?? '')
+  const [cardId, setCardId] = useState<string | null>(expense?.card_id ?? null)
+  const [startDate, setStartDate] = useState(expense?.start_date ?? new Date().toISOString().split('T')[0])
+  const [endDate, setEndDate] = useState(expense?.end_date ?? '')
+  const [category, setCategory] = useState(expense?.category ?? 'otros')
   const [loading, setLoading] = useState(false)
 
+  const isEditing = !!expense
+
   const { cards } = useCards()
-  const { addExpense } = useFixedExpenses()
+  const { addExpense, updateExpense } = useFixedExpenses()
   const { toast } = useToast()
 
   const msiMonthly = totalAmount && totalMonths
@@ -72,7 +77,12 @@ export function FixedExpenseForm({ onSuccess }: FixedExpenseFormProps) {
       }
     }
 
-    const result = await addExpense(data)
+    let result
+    if (isEditing) {
+      result = await updateExpense(expense.id, data)
+    } else {
+      result = await addExpense(data)
+    }
     setLoading(false)
 
     if (result?.error) {
@@ -80,7 +90,7 @@ export function FixedExpenseForm({ onSuccess }: FixedExpenseFormProps) {
       return
     }
 
-    toast('Gasto fijo registrado', 'success')
+    toast(isEditing ? 'Gasto fijo actualizado' : 'Gasto fijo registrado', 'success')
     onSuccess?.()
   }
 
@@ -186,7 +196,7 @@ export function FixedExpenseForm({ onSuccess }: FixedExpenseFormProps) {
       <CategoryPicker type="expense" value={category} onChange={setCategory} />
 
       <Button type="submit" loading={loading} className="w-full" size="lg">
-        Registrar gasto fijo
+        {isEditing ? 'Guardar cambios' : 'Registrar gasto fijo'}
       </Button>
     </form>
   )

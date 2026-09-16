@@ -11,25 +11,28 @@ import { CurrencyInput } from '@/components/ui/currency-input'
 import { useExchangeRate } from '@/lib/hooks/use-exchange-rate'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
-import type { TransactionType } from '@/types/database'
+import type { Transaction, TransactionType } from '@/types/database'
 
 interface TransactionFormProps {
   type: TransactionType
+  transaction?: Transaction
   onSuccess?: () => void
 }
 
-export function TransactionForm({ type, onSuccess }: TransactionFormProps) {
-  const [amount, setAmount] = useState('')
-  const [description, setDescription] = useState('')
-  const [category, setCategory] = useState(type === 'expense' ? 'otros' : 'nomina')
-  const [cardId, setCardId] = useState<string | null>(null)
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [installmentMonths, setInstallmentMonths] = useState('')
-  const [currency, setCurrency] = useState<'MXN' | 'USD'>('MXN')
+export function TransactionForm({ type, transaction, onSuccess }: TransactionFormProps) {
+  const [amount, setAmount] = useState(transaction?.amount?.toString() ?? '')
+  const [description, setDescription] = useState(transaction?.description ?? '')
+  const [category, setCategory] = useState(transaction?.category ?? (type === 'expense' ? 'otros' : 'nomina'))
+  const [cardId, setCardId] = useState<string | null>(transaction?.card_id ?? null)
+  const [date, setDate] = useState(transaction?.date ?? new Date().toISOString().split('T')[0])
+  const [installmentMonths, setInstallmentMonths] = useState(transaction?.installment_months?.toString() ?? '')
+  const [currency, setCurrency] = useState<'MXN' | 'USD'>((transaction?.currency as 'MXN' | 'USD') ?? 'MXN')
   const [loading, setLoading] = useState(false)
 
+  const isEditing = !!transaction
+
   const { cards } = useCards()
-  const { addTransaction } = useTransactions()
+  const { addTransaction, updateTransaction } = useTransactions()
   const { rate: exchangeRate } = useExchangeRate()
   const { toast } = useToast()
 
@@ -47,23 +50,38 @@ export function TransactionForm({ type, onSuccess }: TransactionFormProps) {
 
     setLoading(true)
     const finalAmount = currency === 'USD' && exchangeRate ? numAmount * exchangeRate : numAmount
-    const result = await addTransaction({
-      amount: finalAmount,
-      description,
-      category,
-      type,
-      card_id: cardId,
-      date,
-      is_recurring: false,
-      installment_months: installmentMonths ? parseInt(installmentMonths) : null,
-      installment_current: installmentMonths ? 1 : null,
-      notes: null,
-      is_transfer: false,
-      transfer_from_card_id: null,
-      transfer_to_card_id: null,
-      currency,
-      exchange_rate: currency === 'USD' ? exchangeRate : null,
-    })
+
+    let result
+    if (isEditing) {
+      result = await updateTransaction(transaction.id, {
+        amount: finalAmount,
+        description,
+        category,
+        card_id: cardId,
+        date,
+        installment_months: installmentMonths ? parseInt(installmentMonths) : null,
+        currency,
+        exchange_rate: currency === 'USD' ? exchangeRate : null,
+      })
+    } else {
+      result = await addTransaction({
+        amount: finalAmount,
+        description,
+        category,
+        type,
+        card_id: cardId,
+        date,
+        is_recurring: false,
+        installment_months: installmentMonths ? parseInt(installmentMonths) : null,
+        installment_current: installmentMonths ? 1 : null,
+        notes: null,
+        is_transfer: false,
+        transfer_from_card_id: null,
+        transfer_to_card_id: null,
+        currency,
+        exchange_rate: currency === 'USD' ? exchangeRate : null,
+      })
+    }
 
     setLoading(false)
 
@@ -72,13 +90,19 @@ export function TransactionForm({ type, onSuccess }: TransactionFormProps) {
       return
     }
 
-    toast(type === 'expense' ? 'Gasto registrado' : 'Ingreso registrado', 'success')
-    setAmount('')
-    setDescription('')
-    setCategory(type === 'expense' ? 'otros' : 'nomina')
-    setCardId(null)
-    setInstallmentMonths('')
-    setCurrency('MXN')
+    toast(isEditing
+      ? 'Actualizado'
+      : (type === 'expense' ? 'Gasto registrado' : 'Ingreso registrado'),
+      'success'
+    )
+    if (!isEditing) {
+      setAmount('')
+      setDescription('')
+      setCategory(type === 'expense' ? 'otros' : 'nomina')
+      setCardId(null)
+      setInstallmentMonths('')
+      setCurrency('MXN')
+    }
     onSuccess?.()
   }
 
@@ -163,7 +187,7 @@ export function TransactionForm({ type, onSuccess }: TransactionFormProps) {
       )}
 
       <Button type="submit" loading={loading} className="w-full" size="lg">
-        {type === 'expense' ? 'Registrar gasto' : 'Registrar ingreso'}
+        {isEditing ? 'Guardar cambios' : (type === 'expense' ? 'Registrar gasto' : 'Registrar ingreso')}
       </Button>
     </form>
   )

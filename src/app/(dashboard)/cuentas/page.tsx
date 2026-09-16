@@ -1,34 +1,75 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2, Check, ArrowDownLeft, ArrowUpRight, CalendarDays } from 'lucide-react'
+import { Plus, Trash2, Check, ArrowDownLeft, ArrowUpRight, CalendarDays, Pencil } from 'lucide-react'
 import { useAccounts } from '@/lib/hooks/use-accounts'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import type { AccountType } from '@/types/database'
+import type { Account, AccountType } from '@/types/database'
 
 export default function CuentasPage() {
   const { accounts, loading, addAccount, updateAccount, deleteAccount } = useAccounts()
   const { toast } = useToast()
   const [showForm, setShowForm] = useState(false)
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [filter, setFilter] = useState<'all' | 'receivable' | 'payable'>('all')
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
-  const [form, setForm] = useState({
+  const emptyForm = {
     type: 'receivable' as AccountType,
     person_name: '',
     description: '',
     amount: '',
     due_date: '',
     is_paid: false,
-  })
+  }
+
+  const [form, setForm] = useState(emptyForm)
+
+  function openCreate() {
+    setEditingAccount(null)
+    setForm(emptyForm)
+    setShowForm(true)
+  }
+
+  function openEdit(account: Account) {
+    setEditingAccount(account)
+    setForm({
+      type: account.type,
+      person_name: account.person_name,
+      description: account.description,
+      amount: account.amount.toString(),
+      due_date: account.due_date ?? '',
+      is_paid: account.is_paid,
+    })
+    setShowForm(true)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.person_name || !form.amount) return
+
+    if (editingAccount) {
+      const result = await updateAccount(editingAccount.id, {
+        type: form.type,
+        person_name: form.person_name,
+        description: form.description,
+        amount: parseFloat(form.amount),
+        due_date: form.due_date || null,
+      })
+      if (result && 'error' in result && result.error) {
+        toast('Error al actualizar', 'error')
+      } else {
+        toast('Cuenta actualizada', 'success')
+        setForm(emptyForm)
+        setEditingAccount(null)
+        setShowForm(false)
+      }
+      return
+    }
 
     const result = await addAccount({
       type: form.type,
@@ -43,7 +84,7 @@ export default function CuentasPage() {
       toast('Error al guardar', 'error')
     } else {
       toast('Cuenta agregada', 'success')
-      setForm({ type: 'receivable', person_name: '', description: '', amount: '', due_date: '', is_paid: false })
+      setForm(emptyForm)
       setShowForm(false)
     }
   }
@@ -94,7 +135,7 @@ export default function CuentasPage() {
           <p className="text-sm text-muted">Por cobrar y por pagar</p>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={openCreate}
           className="flex items-center gap-1.5 bg-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-hover transition"
         >
           <Plus size={16} />
@@ -183,11 +224,11 @@ export default function CuentasPage() {
               type="submit"
               className="bg-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-hover transition"
             >
-              Guardar
+              {editingAccount ? 'Guardar cambios' : 'Guardar'}
             </button>
             <button
               type="button"
-              onClick={() => setShowForm(false)}
+              onClick={() => { setShowForm(false); setEditingAccount(null) }}
               className="px-4 py-2 rounded-lg text-sm text-muted hover:bg-gray-50 transition"
             >
               Cancelar
@@ -264,6 +305,12 @@ export default function CuentasPage() {
               {formatMXN(Number(account.amount))}
             </p>
 
+            <button
+              onClick={() => openEdit(account)}
+              className="shrink-0 p-1.5 text-muted hover:text-accent rounded-lg hover:bg-accent/5 transition"
+            >
+              <Pencil size={14} />
+            </button>
             <button
               onClick={() => handleDelete(account.id)}
               className="shrink-0 p-1.5 text-muted hover:text-danger rounded-lg hover:bg-danger/5 transition"

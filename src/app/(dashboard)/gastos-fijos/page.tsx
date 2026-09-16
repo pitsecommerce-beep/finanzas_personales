@@ -11,10 +11,12 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
 import { getRemainingMonths } from '@/lib/utils/dates'
+import type { FixedExpense } from '@/types/database'
 
 export default function GastosFijosPage() {
   const { expenses, loading, deleteExpense, refetch } = useFixedExpenses()
   const [showForm, setShowForm] = useState(false)
+  const [editingExpense, setEditingExpense] = useState<FixedExpense | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const { toast } = useToast()
 
@@ -31,10 +33,6 @@ export default function GastosFijosPage() {
     if (e.end_date && new Date(e.end_date) < now) return sum
     return sum + Number(e.monthly_amount)
   }, 0)
-
-  async function handleDelete(id: string) {
-    setDeleteId(id)
-  }
 
   async function confirmDelete() {
     if (!deleteId) return
@@ -71,10 +69,20 @@ export default function GastosFijosPage() {
         </div>
       )}
 
-      <FixedExpenseList expenses={expenses} onDelete={handleDelete} />
+      <FixedExpenseList
+        expenses={expenses}
+        onEdit={(exp) => setEditingExpense(exp)}
+        onDelete={(id) => setDeleteId(id)}
+      />
 
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Nuevo gasto fijo">
         <FixedExpenseForm onSuccess={() => { setShowForm(false); refetch() }} />
+      </Modal>
+
+      <Modal open={!!editingExpense} onClose={() => setEditingExpense(null)} title="Editar gasto fijo">
+        {editingExpense && (
+          <FixedExpenseForm expense={editingExpense} onSuccess={() => { setEditingExpense(null); refetch() }} />
+        )}
       </Modal>
 
       <ConfirmDialog

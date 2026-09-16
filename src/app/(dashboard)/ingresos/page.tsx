@@ -12,7 +12,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
-import type { IncomeSource } from '@/types/database'
+import type { IncomeSource, Transaction } from '@/types/database'
 
 const FREQ_LABELS: Record<string, string> = {
   weekly: 'Semanal',
@@ -35,6 +35,7 @@ export default function IngresosPage() {
   const [showIncomeForm, setShowIncomeForm] = useState(false)
   const [editingSource, setEditingSource] = useState<IncomeSource | null>(null)
   const [showTxForm, setShowTxForm] = useState(false)
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; kind: 'source' | 'tx' } | null>(null)
   const { toast } = useToast()
 
@@ -112,6 +113,7 @@ export default function IngresosPage() {
         <h2 className="font-semibold text-sm mb-3">Historial de ingresos</h2>
         <TransactionList
           transactions={transactions}
+          onEdit={(tx) => setEditingTx(tx)}
           onDelete={(id) => setDeleteTarget({ id, kind: 'tx' })}
         />
       </div>
@@ -128,6 +130,12 @@ export default function IngresosPage() {
 
       <Modal open={showTxForm} onClose={() => setShowTxForm(false)} title="Registrar ingreso">
         <TransactionForm type="income" onSuccess={() => { setShowTxForm(false); refetchTx() }} />
+      </Modal>
+
+      <Modal open={!!editingTx} onClose={() => setEditingTx(null)} title="Editar ingreso">
+        {editingTx && (
+          <TransactionForm type="income" transaction={editingTx} onSuccess={() => { setEditingTx(null); refetchTx() }} />
+        )}
       </Modal>
 
       <ConfirmDialog
