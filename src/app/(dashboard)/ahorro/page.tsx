@@ -12,6 +12,8 @@ import { CurrencyInput } from '@/components/ui/currency-input'
 import { CardSelector } from '@/components/cards/card-selector'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
 import type { SavingsGoal } from '@/types/database'
 
 export default function AhorroPage() {
@@ -26,12 +28,16 @@ export default function AhorroPage() {
   const [monthlyAmount, setMonthlyAmount] = useState('')
   const [targetAmount, setTargetAmount] = useState('')
   const [cardId, setCardId] = useState<string | null>(null)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
   function openCreate() {
     setDescription('')
     setMonthlyAmount('')
     setTargetAmount('')
     setCardId(null)
+    setStartDate(new Date().toISOString().split('T')[0])
+    setEndDate('')
     setShowForm(true)
   }
 
@@ -40,6 +46,8 @@ export default function AhorroPage() {
     setMonthlyAmount(goal.monthly_amount.toString())
     setTargetAmount(goal.target_amount?.toString() ?? '')
     setCardId(goal.card_id)
+    setStartDate(goal.start_date ?? '')
+    setEndDate(goal.end_date ?? '')
     setEditingGoal(goal)
   }
 
@@ -55,6 +63,8 @@ export default function AhorroPage() {
       monthly_amount: parseFloat(monthlyAmount),
       target_amount: targetAmount ? parseFloat(targetAmount) : null,
       card_id: cardId,
+      start_date: startDate || null,
+      end_date: endDate || null,
       is_active: true,
     }
 
@@ -152,6 +162,13 @@ export default function AhorroPage() {
                   </div>
                 )}
               </div>
+              {(g.start_date || g.end_date) && (
+                <p className="text-xs text-muted mt-2">
+                  {g.start_date && format(new Date(g.start_date + 'T12:00:00'), "d MMM yyyy", { locale: es })}
+                  {g.start_date && g.end_date && ' → '}
+                  {g.end_date && format(new Date(g.end_date + 'T12:00:00'), "d MMM yyyy", { locale: es })}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -186,6 +203,22 @@ export default function AhorroPage() {
             onChange={setTargetAmount}
             placeholder="60,000"
           />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              id="startDate"
+              label="Fecha de inicio"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+            <Input
+              id="endDate"
+              label="Fecha fin (opcional)"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
           <CardSelector
             cards={cards}
             value={cardId}
