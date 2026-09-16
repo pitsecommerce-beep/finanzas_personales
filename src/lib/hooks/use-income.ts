@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
+import { adjustDateToBusinessDay } from '@/lib/utils/dates'
 import type { IncomeSource } from '@/types/database'
 
 export function useIncome() {
@@ -37,9 +38,17 @@ export function useIncome() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
 
+    const adjustedSource = {
+      ...source,
+      user_id: user.id,
+      next_payment_date: source.next_payment_date
+        ? adjustDateToBusinessDay(source.next_payment_date)
+        : null,
+    }
+
     const { data, error } = await supabase
       .from('income_sources')
-      .insert({ ...source, user_id: user.id })
+      .insert(adjustedSource)
       .select()
       .single()
 

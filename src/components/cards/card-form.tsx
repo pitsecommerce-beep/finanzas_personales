@@ -53,8 +53,8 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
       alias,
       card_type: cardType,
       last_four_digits: lastFour || null,
-      cut_off_day: parseInt(cutOffDay),
-      payment_day: parseInt(paymentDay),
+      cut_off_day: cardType === 'credit' ? parseInt(cutOffDay) : null,
+      payment_day: cardType === 'credit' ? parseInt(paymentDay) : null,
       credit_limit: creditLimit ? parseFloat(creditLimit) : null,
       color,
     }
@@ -127,40 +127,41 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
         maxLength={4}
       />
 
-      <div className="grid grid-cols-2 gap-3">
-        <Input
-          id="cutOff"
-          label="Dia de corte"
-          type="number"
-          min="1"
-          max="31"
-          value={cutOffDay}
-          onChange={(e) => setCutOffDay(e.target.value)}
-          placeholder="15"
-          required
-        />
-        <Input
-          id="paymentDay"
-          label="Dia de pago"
-          type="number"
-          min="1"
-          max="31"
-          value={paymentDay}
-          onChange={(e) => setPaymentDay(e.target.value)}
-          placeholder="5"
-          required
-        />
-      </div>
-
       {cardType === 'credit' && (
-        <Input
-          id="creditLimit"
-          label="Limite de credito"
-          type="number"
-          value={creditLimit}
-          onChange={(e) => setCreditLimit(e.target.value)}
-          placeholder="50000"
-        />
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              id="cutOff"
+              label="Dia de corte"
+              type="number"
+              min="1"
+              max="31"
+              value={cutOffDay}
+              onChange={(e) => setCutOffDay(e.target.value)}
+              placeholder="15"
+              required
+            />
+            <Input
+              id="paymentDay"
+              label="Dia de pago"
+              type="number"
+              min="1"
+              max="31"
+              value={paymentDay}
+              onChange={(e) => setPaymentDay(e.target.value)}
+              placeholder="5"
+              required
+            />
+          </div>
+          <Input
+            id="creditLimit"
+            label="Limite de credito"
+            type="number"
+            value={creditLimit}
+            onChange={(e) => setCreditLimit(e.target.value)}
+            placeholder="50000"
+          />
+        </>
       )}
 
       <div className="space-y-1">

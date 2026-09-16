@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
+import { adjustDateToBusinessDay } from '@/lib/utils/dates'
 import type { Account } from '@/types/database'
 
 export function useAccounts() {
@@ -37,9 +38,17 @@ export function useAccounts() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
 
+    const adjustedAccount = {
+      ...account,
+      user_id: user.id,
+      due_date: account.due_date
+        ? adjustDateToBusinessDay(account.due_date)
+        : null,
+    }
+
     const { data, error } = await supabase
       .from('accounts')
-      .insert({ ...account, user_id: user.id })
+      .insert(adjustedAccount)
       .select()
       .single()
 
@@ -52,9 +61,18 @@ export function useAccounts() {
   async function updateAccount(id: string, updates: Partial<Account>) {
     if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
     const supabase = createClient()
+    const adjustedUpdates = {
+      ...updates,
+      ...(updates.due_date !== undefined && {
+        due_date: updates.due_date
+          ? adjustDateToBusinessDay(updates.due_date)
+          : null,
+      }),
+    }
+
     const { data, error } = await supabase
       .from('accounts')
-      .update(updates)
+      .update(adjustedUpdates)
       .eq('id', id)
       .select()
       .single()

@@ -56,14 +56,18 @@ export function CardItem({ card, onEdit, onDelete }: CardItemProps) {
 
       <div className="flex justify-between items-end relative">
         <div className="flex gap-6 text-xs">
-          <div>
-            <p className="text-white/60">Corte</p>
-            <p className="font-medium">Dia {card.cut_off_day}</p>
-          </div>
-          <div>
-            <p className="text-white/60">Pago</p>
-            <p className="font-medium">Dia {card.payment_day}</p>
-          </div>
+          {card.cut_off_day != null && (
+            <div>
+              <p className="text-white/60">Corte</p>
+              <p className="font-medium">Dia {card.cut_off_day}</p>
+            </div>
+          )}
+          {card.payment_day != null && (
+            <div>
+              <p className="text-white/60">Pago</p>
+              <p className="font-medium">Dia {card.payment_day}</p>
+            </div>
+          )}
         </div>
         <CreditCard size={24} className="text-white/40" />
       </div>

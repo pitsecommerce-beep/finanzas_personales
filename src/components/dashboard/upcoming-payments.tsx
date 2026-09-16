@@ -16,8 +16,9 @@ export function UpcomingPayments({ cards }: UpcomingPaymentsProps) {
   }
 
   const upcoming = cards
+    .filter((card) => card.payment_day != null)
     .map((card) => {
-      const paymentDate = getNextPaymentDate(card.payment_day)
+      const paymentDate = getNextPaymentDate(card.payment_day!)
       const days = daysUntil(paymentDate)
       return { card, paymentDate, days }
     })
