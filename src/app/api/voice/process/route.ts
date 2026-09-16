@@ -283,82 +283,98 @@ ${cardsContext || 'No tiene tarjetas registradas'}
 
   const messages = conversation ?? [{ role: 'user', content: text }]
 
-  let response = await callClaude(apiKey, systemPrompt, messages)
+  try {
+    let response = await callClaude(apiKey, systemPrompt, messages)
 
-  const actions: string[] = []
-  let maxIterations = 5
+    const actions: string[] = []
+    let maxIterations = 5
 
-  while (maxIterations > 0) {
-    maxIterations--
+    while (maxIterations > 0) {
+      maxIterations--
 
-    const stopReason = response.stop_reason
-    if (stopReason !== 'tool_use') break
+      const stopReason = response.stop_reason
+      if (stopReason !== 'tool_use') break
 
-    const toolUseBlocks = response.content.filter((b: { type: string }) => b.type === 'tool_use')
-    const toolResults = []
+      const toolUseBlocks = response.content.filter((b: { type: string }) => b.type === 'tool_use')
+      const toolResults = []
 
-    for (const block of toolUseBlocks) {
-      if (block.name === 'ask_user') {
-        const question = (block.input as Record<string, string>).question
-        return NextResponse.json({
-          question,
-          conversation: [
-            ...messages,
-            { role: 'assistant', content: response.content },
-          ],
+      for (const block of toolUseBlocks) {
+        if (block.name === 'ask_user') {
+          const question = (block.input as Record<string, string>).question
+          return NextResponse.json({
+            question,
+            conversation: [
+              ...messages,
+              { role: 'assistant', content: response.content },
+            ],
+          })
+        }
+
+        const result = await executeTool(block.name, block.input as Record<string, unknown>, user.id, supabase, cards)
+        actions.push(result)
+        toolResults.push({
+          type: 'tool_result',
+          tool_use_id: block.id,
+          content: result,
         })
       }
 
-      const result = await executeTool(block.name, block.input as Record<string, unknown>, user.id, supabase, cards)
-      actions.push(result)
-      toolResults.push({
-        type: 'tool_result',
-        tool_use_id: block.id,
-        content: result,
-      })
+      const newMessages = [
+        ...messages,
+        { role: 'assistant', content: response.content },
+        { role: 'user', content: toolResults },
+      ]
+
+      response = await callClaude(apiKey, systemPrompt, newMessages)
     }
 
-    const newMessages = [
-      ...messages,
-      { role: 'assistant', content: response.content },
-      { role: 'user', content: toolResults },
-    ]
+    const textBlocks = response.content
+      .filter((b: { type: string }) => b.type === 'text')
+      .map((b: { text: string }) => b.text)
+      .join('')
 
-    response = await callClaude(apiKey, systemPrompt, newMessages)
+    return NextResponse.json({
+      message: textBlocks,
+      actions,
+    })
+  } catch (err) {
+    console.error('[Nummo] Voice process error:', err)
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Error al procesar' },
+      { status: 500 }
+    )
   }
-
-  const textBlocks = response.content
-    .filter((b: { type: string }) => b.type === 'text')
-    .map((b: { text: string }) => b.text)
-    .join('')
-
-  return NextResponse.json({
-    message: textBlocks,
-    actions,
-  })
 }
 
 async function callClaude(apiKey: string, system: string, messages: unknown[]) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system,
-      tools: TOOLS,
-      messages,
-    }),
-  })
+  const body = {
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 1024,
+    system,
+    tools: TOOLS,
+    messages,
+  }
+
+  let res: Response
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(body),
+    })
+  } catch (fetchErr) {
+    console.error('[Nummo] Claude fetch error:', fetchErr)
+    throw new Error('No se pudo conectar con el servicio de IA')
+  }
 
   if (!res.ok) {
-    const err = await res.text()
-    console.warn('[Nummo] Claude error:', err)
-    throw new Error(`Claude API error: ${res.status}`)
+    const errText = await res.text()
+    console.error('[Nummo] Claude API error:', res.status, errText)
+    throw new Error(`Error de IA (${res.status}): ${errText.slice(0, 200)}`)
   }
 
   return res.json()
