@@ -31,6 +31,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className={`${geistSans.variable} h-full`}>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+      </head>
       <body className="min-h-full bg-background text-foreground antialiased">
         {children}
       </body>
