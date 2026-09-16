@@ -107,7 +107,7 @@ export default function IngresosPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         title="Eliminar registro"
-        message="Esta accion no se puede deshacer. ¿Deseas continuar?"
+        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}

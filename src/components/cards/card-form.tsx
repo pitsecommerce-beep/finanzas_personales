@@ -112,7 +112,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
                   : 'border-border text-muted hover:border-gray-300'
               }`}
             >
-              {t === 'credit' ? 'Credito' : 'Debito'}
+              {t === 'credit' ? 'Crédito' : 'Débito'}
             </button>
           ))}
         </div>
@@ -120,7 +120,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
 
       <Input
         id="lastFour"
-        label="Ultimos 4 digitos"
+        label="Últimos 4 dígitos"
         value={lastFour}
         onChange={(e) => setLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))}
         placeholder="1234"
@@ -132,7 +132,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
           <div className="grid grid-cols-2 gap-3">
             <Input
               id="cutOff"
-              label="Dia de corte"
+              label="Día de corte"
               type="number"
               min="1"
               max="31"
@@ -143,7 +143,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
             />
             <Input
               id="paymentDay"
-              label="Dia de pago"
+              label="Día de pago"
               type="number"
               min="1"
               max="31"
@@ -155,7 +155,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
           </div>
           <Input
             id="creditLimit"
-            label="Limite de credito"
+            label="Límite de crédito"
             type="number"
             value={creditLimit}
             onChange={(e) => setCreditLimit(e.target.value)}

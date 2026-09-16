@@ -27,7 +27,7 @@ export function CardItem({ card, onEdit, onDelete }: CardItemProps) {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase font-medium">
-            {card.card_type === 'credit' ? 'Credito' : 'Debito'}
+            {card.card_type === 'credit' ? 'Crédito' : 'Débito'}
           </span>
           {onEdit && (
             <button
@@ -59,13 +59,13 @@ export function CardItem({ card, onEdit, onDelete }: CardItemProps) {
           {card.cut_off_day != null && (
             <div>
               <p className="text-white/60">Corte</p>
-              <p className="font-medium">Dia {card.cut_off_day}</p>
+              <p className="font-medium">Día {card.cut_off_day}</p>
             </div>
           )}
           {card.payment_day != null && (
             <div>
               <p className="text-white/60">Pago</p>
-              <p className="font-medium">Dia {card.payment_day}</p>
+              <p className="font-medium">Día {card.payment_day}</p>
             </div>
           )}
         </div>

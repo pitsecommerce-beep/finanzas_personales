@@ -57,7 +57,7 @@ export default function GastosPage() {
       <ConfirmDialog
         open={!!deleteId}
         title="Eliminar gasto"
-        message="Esta accion no se puede deshacer. ¿Deseas continuar?"
+        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}

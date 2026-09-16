@@ -10,6 +10,15 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: 'Nummo - Control de Finanzas Personales',
   description: 'Gestiona tus finanzas personales, tarjetas, gastos e ingresos de forma inteligente.',
+  icons: {
+    icon: '/favicon_nummo.png',
+    apple: '/favicon_nummo.png',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Nummo',
+  },
 }
 
 export default function RootLayout({

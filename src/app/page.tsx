@@ -10,7 +10,7 @@ export default async function LandingPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) redirect('/inicio')
     } catch {
-      console.warn('[Nummo] No se pudo verificar sesion en landing')
+      console.warn('[Nummo] No se pudo verificar sesión en landing')
     }
   }
 
@@ -26,7 +26,7 @@ export default async function LandingPage() {
             href="/login"
             className="px-4 py-2 text-sm rounded-lg border border-white/20 hover:bg-white/5 transition"
           >
-            Iniciar sesion
+            Iniciar sesión
           </Link>
           <Link
             href="/registro"
@@ -59,12 +59,12 @@ export default async function LandingPage() {
             {
               icon: CreditCard,
               title: 'Tarjetas',
-              desc: 'Gestiona tus tarjetas de credito y debito con fechas de corte y pago.',
+              desc: 'Gestiona tus tarjetas de crédito y débito con fechas de corte y pago.',
             },
             {
               icon: BarChart3,
               title: 'Dashboard',
-              desc: 'Visualiza tus gastos por categoria, ahorros y tendencias mensuales.',
+              desc: 'Visualiza tus gastos por categoría, ahorros y tendencias mensuales.',
             },
             {
               icon: MessageCircle,
@@ -74,7 +74,7 @@ export default async function LandingPage() {
             {
               icon: Shield,
               title: 'Seguro',
-              desc: 'Tus datos estan protegidos con cifrado y politicas de acceso estrictas.',
+              desc: 'Tus datos están protegidos con cifrado y políticas de acceso estrictas.',
             },
           ].map((feature) => (
             <div key={feature.title} className="bg-secondary rounded-xl p-6">
@@ -92,7 +92,7 @@ export default async function LandingPage() {
             <p className="text-sm text-gray-500">My Nummo by Orkesta Labs</p>
             <nav className="flex gap-6 text-sm text-gray-400">
               <Link href="/aviso-privacidad" className="hover:text-white transition">Aviso de privacidad</Link>
-              <Link href="/terminos" className="hover:text-white transition">Terminos y condiciones</Link>
+              <Link href="/terminos" className="hover:text-white transition">Términos y condiciones</Link>
               <Link href="/contacto" className="hover:text-white transition">Contacto</Link>
             </nav>
           </div>

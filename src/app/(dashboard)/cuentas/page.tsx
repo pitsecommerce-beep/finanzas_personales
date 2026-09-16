@@ -153,7 +153,7 @@ export default function CuentasPage() {
 
           <input
             type="text"
-            placeholder="Descripcion (opcional)"
+            placeholder="Descripción (opcional)"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
@@ -277,7 +277,7 @@ export default function CuentasPage() {
       <ConfirmDialog
         open={!!deleteId}
         title="Eliminar cuenta"
-        message="Esta accion no se puede deshacer. ¿Deseas continuar?"
+        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}
