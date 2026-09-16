@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { formatMXN } from '@/lib/utils/currency'
 import { getNextPaymentDate, getNextCutOffDate, daysUntil } from '@/lib/utils/dates'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth, addMonths, isAfter, isBefore } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ArrowLeft, CalendarDays } from 'lucide-react'
 import { TransactionList } from '@/components/transactions/transaction-list'
@@ -61,7 +61,25 @@ export default function CardDetailPage() {
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + Number(t.amount), 0)
 
-  const fixedMonthly = fixedExpenses.reduce((sum, fe) => sum + Number(fe.monthly_amount), 0)
+  const now = new Date()
+  const currentMonthStart = startOfMonth(now)
+  const currentMonthEnd = endOfMonth(now)
+
+  const activeFixedExpenses = fixedExpenses.filter(fe => {
+    const feStart = startOfMonth(new Date(fe.start_date + 'T12:00:00'))
+    if (isAfter(feStart, currentMonthEnd)) return false
+    if (fe.is_msi && fe.total_months > 1) {
+      const feExpiry = endOfMonth(addMonths(feStart, fe.total_months - 1))
+      if (isBefore(feExpiry, currentMonthStart)) return false
+    }
+    if (!fe.is_msi && fe.end_date) {
+      const feEnd = new Date(fe.end_date + 'T12:00:00')
+      if (isBefore(feEnd, currentMonthStart)) return false
+    }
+    return true
+  })
+
+  const fixedMonthly = activeFixedExpenses.reduce((sum, fe) => sum + Number(fe.monthly_amount), 0)
 
   const expectedPayment = isCredit ? (card.used_credit ?? 0) : 0
 
@@ -133,11 +151,11 @@ export default function CardDetailPage() {
         </div>
       )}
 
-      {fixedExpenses.length > 0 && (
+      {activeFixedExpenses.length > 0 && (
         <div className="bg-white rounded-xl border border-border p-4">
           <h3 className="font-semibold text-sm mb-3">Gastos fijos asociados</h3>
           <div className="space-y-2">
-            {fixedExpenses.map(fe => (
+            {activeFixedExpenses.map(fe => (
               <div key={fe.id} className="flex justify-between text-sm">
                 <span>{fe.description}</span>
                 <span className="font-medium text-danger">{formatMXN(fe.monthly_amount)}/mes</span>

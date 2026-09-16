@@ -19,7 +19,6 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { useProfileContext } from '@/lib/context/profile-context'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 const links = [
@@ -40,7 +39,6 @@ const links = [
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { firstName } = useProfileContext()
   const [showLogout, setShowLogout] = useState(false)
 
   async function handleLogout() {
@@ -57,11 +55,7 @@ export function Sidebar() {
           <img src="/favicon_nummo.png" alt="Nummo" className="h-8 w-8 rounded-lg" />
           <h1 className="text-xl font-bold text-accent">Nummo</h1>
         </div>
-        {firstName ? (
-          <p className="text-base font-semibold text-white mt-2">Hola, {firstName}</p>
-        ) : (
-          <p className="text-xs text-gray-400 mt-1">Control financiero inteligente</p>
-        )}
+        <p className="text-xs text-gray-400 mt-1">Control financiero inteligente</p>
       </div>
 
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto scrollbar-none">
