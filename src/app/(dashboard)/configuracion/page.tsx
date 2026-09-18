@@ -363,8 +363,22 @@ export default function ConfiguracionPage() {
 
                     <p className="text-xs text-muted">Cambia el metodo a <strong>POST</strong></p>
 
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-1">
+                      <p className="text-xs font-medium text-amber-800">Encabezados (Headers)</p>
+                      <p className="text-xs text-amber-700">
+                        Toca <strong>&quot;Encabezados&quot;</strong> para expandir la seccion. Agrega un nuevo encabezado:
+                      </p>
+                    </div>
+
                     <CopyField
-                      label="Encabezado: Authorization"
+                      label="Clave del encabezado"
+                      value="Authorization"
+                      copied={copiedField === 'hkey'}
+                      onCopy={() => copyToClipboard('Authorization', 'hkey')}
+                    />
+
+                    <CopyField
+                      label="Valor del encabezado"
                       value={`Bearer ${tokens[0].token}`}
                       copied={copiedField === 'auth'}
                       onCopy={() => copyToClipboard(`Bearer ${tokens[0].token}`, 'auth')}
@@ -374,7 +388,7 @@ export default function ConfiguracionPage() {
                   <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-3">
                     <p className="text-sm font-medium">3. Configurar el cuerpo JSON</p>
                     <p className="text-xs text-muted">
-                      En <strong>Cuerpo</strong> elige <strong>JSON</strong>, agrega tres campos:
+                      Toca <strong>&quot;Cuerpo de la solicitud&quot;</strong> y cambialo a <strong>&quot;JSON&quot;</strong>. Agrega estos campos:
                     </p>
 
                     <CopyField
@@ -384,7 +398,7 @@ export default function ConfiguracionPage() {
                       onCopy={() => copyToClipboard('amount', 'k1')}
                     />
                     <p className="text-xs text-muted -mt-1">
-                      Valor: variable magica <strong>Monto</strong>
+                      Valor: toca el campo, selecciona <strong>&quot;Variable magica&quot;</strong> &gt; <strong>&quot;Monto&quot;</strong> (de la transaccion)
                     </p>
 
                     <CopyField
@@ -394,17 +408,17 @@ export default function ConfiguracionPage() {
                       onCopy={() => copyToClipboard('merchant', 'k2')}
                     />
                     <p className="text-xs text-muted -mt-1">
-                      Valor: variable magica <strong>Comercio</strong>
+                      Valor: variable magica <strong>&quot;Comercio&quot;</strong>. Si no aparece, escribe el nombre del comercio manualmente.
                     </p>
 
                     <CopyField
-                      label="Clave 3"
+                      label="Clave 3 (opcional)"
                       value="card"
                       copied={copiedField === 'k3'}
                       onCopy={() => copyToClipboard('card', 'k3')}
                     />
                     <p className="text-xs text-muted -mt-1">
-                      Valor: variable magica <strong>Tarjeta</strong> (se empareja con tus tarjetas en Nummo por nombre o ultimos 4 digitos)
+                      Valor: variable magica <strong>&quot;Tarjeta&quot;</strong> (se empareja con tus tarjetas en Nummo por nombre o ultimos 4 digitos)
                     </p>
                   </div>
                 </div>
