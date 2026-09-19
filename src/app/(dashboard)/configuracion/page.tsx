@@ -30,6 +30,7 @@ export default function ConfiguracionPage() {
   const [loadingData, setLoadingData] = useState(true)
   const [showLogout, setShowLogout] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [shortcutsTab, setShortcutsTab] = useState<'manual' | 'auto'>('manual')
   const [tokens, setTokens] = useState<Array<{ id: string; token: string; label: string; is_active: boolean; created_at: string }>>([])
   const [tokensLoading, setTokensLoading] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
@@ -144,36 +145,12 @@ export default function ConfiguracionPage() {
     ? `${window.location.origin}/api/shortcuts/expense`
     : ''
 
-  function copyFullConfig(token: string) {
-    const config = [
-      `URL: ${apiUrl}`,
-      `Metodo: POST`,
-      ``,
-      `Encabezados:`,
-      `  Authorization: Bearer ${token}`,
-      `  Content-Type: application/json`,
-      ``,
-      `Cuerpo (JSON):`,
-      `{`,
-      `  "amount": [Monto de la transaccion],`,
-      `  "merchant": "[Nombre del comercio]"`,
-      `}`,
-    ].join('\n')
-    navigator.clipboard.writeText(config)
-    setCopiedField('full')
-    setTimeout(() => setCopiedField(null), 3000)
-    toast('Configuracion copiada al portapapeles', 'success')
-  }
-
   async function testToken(token: string) {
     setTestingToken(true)
     try {
-      const res = await fetch(apiUrl, {
+      const res = await fetch(`${apiUrl}?token=${token}`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: 0.01, merchant: 'Prueba Nummo' }),
       })
       const data = await res.json()
@@ -341,98 +318,154 @@ export default function ConfiguracionPage() {
               </div>
             ) : (
               <>
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold text-muted uppercase tracking-wide">Pasos en la app Atajos</p>
+                <div className="flex rounded-lg border border-border overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShortcutsTab('manual')}
+                    className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${shortcutsTab === 'manual' ? 'bg-accent text-white' : 'bg-gray-50 text-muted hover:text-foreground'}`}
+                  >
+                    Atajo manual (recomendado)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShortcutsTab('auto')}
+                    className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${shortcutsTab === 'auto' ? 'bg-accent text-white' : 'bg-gray-50 text-muted hover:text-foreground'}`}
+                  >
+                    Automatico (Apple Pay)
+                  </button>
+                </div>
 
-                  <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-2">
-                    <p className="text-sm font-medium">1. Crear la automatizacion</p>
-                    <p className="text-xs text-muted">
-                      Atajos &gt; Automatizacion &gt; <strong>+</strong> &gt; busca <strong>&quot;Transaccion&quot;</strong> &gt; selecciona <strong>&quot;Se completa una transaccion&quot;</strong>
-                    </p>
-                  </div>
+                {shortcutsTab === 'manual' ? (
+                  <div className="space-y-3">
+                    <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-700">
+                      Este metodo siempre funciona. Creas un atajo que te pide el monto y comercio, y lo ejecutas despues de cada compra.
+                    </div>
 
-                  <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-3">
-                    <p className="text-sm font-medium">2. Agregar la accion &quot;Obtener contenido de la URL&quot;</p>
-
-                    <CopyField
-                      label="URL"
-                      value={apiUrl}
-                      copied={copiedField === 'url'}
-                      onCopy={() => copyToClipboard(apiUrl, 'url')}
-                    />
-
-                    <p className="text-xs text-muted">Cambia el metodo a <strong>POST</strong></p>
-
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-1">
-                      <p className="text-xs font-medium text-amber-800">Encabezados (Headers)</p>
-                      <p className="text-xs text-amber-700">
-                        Toca <strong>&quot;Encabezados&quot;</strong> para expandir la seccion. Agrega un nuevo encabezado:
+                    <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-2">
+                      <p className="text-sm font-medium">1. Crear un atajo nuevo</p>
+                      <p className="text-xs text-muted">
+                        Abre <strong>Atajos</strong> &gt; toca <strong>+</strong> arriba a la derecha &gt; ponle nombre <strong>&quot;Registrar gasto&quot;</strong>
                       </p>
                     </div>
 
-                    <CopyField
-                      label="Clave del encabezado"
-                      value="Authorization"
-                      copied={copiedField === 'hkey'}
-                      onCopy={() => copyToClipboard('Authorization', 'hkey')}
-                    />
+                    <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-2">
+                      <p className="text-sm font-medium">2. Agregar &quot;Solicitar entrada&quot; (x2)</p>
+                      <p className="text-xs text-muted">
+                        Busca la accion <strong>&quot;Solicitar entrada&quot;</strong> y agregala dos veces:
+                      </p>
+                      <p className="text-xs text-muted">
+                        Primera: pregunta <strong>&quot;Monto del gasto&quot;</strong>, tipo <strong>Numero</strong>
+                      </p>
+                      <p className="text-xs text-muted">
+                        Segunda: pregunta <strong>&quot;Comercio o descripcion&quot;</strong>, tipo <strong>Texto</strong>
+                      </p>
+                    </div>
 
-                    <CopyField
-                      label="Valor del encabezado"
-                      value={`Bearer ${tokens[0].token}`}
-                      copied={copiedField === 'auth'}
-                      onCopy={() => copyToClipboard(`Bearer ${tokens[0].token}`, 'auth')}
-                    />
+                    <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-3">
+                      <p className="text-sm font-medium">3. Agregar &quot;Obtener contenido de la URL&quot;</p>
+                      <p className="text-xs text-muted">
+                        Copia esta URL completa (ya incluye tu token). Pegala como la URL de la accion:
+                      </p>
+                      <CopyField
+                        label="URL base con token"
+                        value={`${apiUrl}?token=${tokens[0].token}`}
+                        copied={copiedField === 'geturl'}
+                        onCopy={() => copyToClipboard(`${apiUrl}?token=${tokens[0].token}`, 'geturl')}
+                      />
+                      <p className="text-xs text-muted">Cambia el metodo a <strong>POST</strong></p>
+                      <p className="text-xs text-muted">
+                        Toca <strong>&quot;Cuerpo de la solicitud&quot;</strong>, cambialo a <strong>&quot;JSON&quot;</strong> y agrega:
+                      </p>
+                      <CopyField
+                        label="Clave 1"
+                        value="amount"
+                        copied={copiedField === 'k1'}
+                        onCopy={() => copyToClipboard('amount', 'k1')}
+                      />
+                      <p className="text-xs text-muted -mt-1">
+                        Valor: toca el campo y selecciona <strong>&quot;Entrada proporcionada&quot;</strong> de la primera solicitud (el monto)
+                      </p>
+                      <CopyField
+                        label="Clave 2"
+                        value="merchant"
+                        copied={copiedField === 'k2'}
+                        onCopy={() => copyToClipboard('merchant', 'k2')}
+                      />
+                      <p className="text-xs text-muted -mt-1">
+                        Valor: <strong>&quot;Entrada proporcionada&quot;</strong> de la segunda solicitud (el comercio)
+                      </p>
+                    </div>
+
+                    <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-2">
+                      <p className="text-sm font-medium">4. Listo</p>
+                      <p className="text-xs text-muted">
+                        Ejecuta el atajo despues de cada compra. Tambien puedes agregarlo a tu pantalla de inicio o pedirle a Siri que lo ejecute.
+                      </p>
+                    </div>
                   </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+                      Solo funciona con pagos por Apple Pay o tarjetas registradas en Wallet. Si tu banco no envia notificaciones a Wallet, usa el metodo manual.
+                    </div>
 
-                  <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-3">
-                    <p className="text-sm font-medium">3. Configurar el cuerpo JSON</p>
-                    <p className="text-xs text-muted">
-                      Toca <strong>&quot;Cuerpo de la solicitud&quot;</strong> y cambialo a <strong>&quot;JSON&quot;</strong>. Agrega estos campos:
-                    </p>
+                    <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-2">
+                      <p className="text-sm font-medium">1. Crear la automatizacion</p>
+                      <p className="text-xs text-muted">
+                        Atajos &gt; Automatizacion &gt; <strong>+</strong> &gt; busca <strong>&quot;Transaccion&quot;</strong> &gt; <strong>&quot;Se completa una transaccion&quot;</strong> &gt; <strong>&quot;Ejecutar inmediatamente&quot;</strong>
+                      </p>
+                    </div>
 
-                    <CopyField
-                      label="Clave 1"
-                      value="amount"
-                      copied={copiedField === 'k1'}
-                      onCopy={() => copyToClipboard('amount', 'k1')}
-                    />
-                    <p className="text-xs text-muted -mt-1">
-                      Valor: toca el campo, selecciona <strong>&quot;Variable magica&quot;</strong> &gt; <strong>&quot;Monto&quot;</strong> (de la transaccion)
-                    </p>
+                    <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-3">
+                      <p className="text-sm font-medium">2. Agregar &quot;Obtener contenido de la URL&quot;</p>
 
-                    <CopyField
-                      label="Clave 2"
-                      value="merchant"
-                      copied={copiedField === 'k2'}
-                      onCopy={() => copyToClipboard('merchant', 'k2')}
-                    />
-                    <p className="text-xs text-muted -mt-1">
-                      Valor: variable magica <strong>&quot;Comercio&quot;</strong>. Si no aparece, escribe el nombre del comercio manualmente.
-                    </p>
+                      <CopyField
+                        label="URL con token"
+                        value={`${apiUrl}?token=${tokens[0].token}`}
+                        copied={copiedField === 'autourl'}
+                        onCopy={() => copyToClipboard(`${apiUrl}?token=${tokens[0].token}`, 'autourl')}
+                      />
 
-                    <CopyField
-                      label="Clave 3 (opcional)"
-                      value="card"
-                      copied={copiedField === 'k3'}
-                      onCopy={() => copyToClipboard('card', 'k3')}
-                    />
-                    <p className="text-xs text-muted -mt-1">
-                      Valor: variable magica <strong>&quot;Tarjeta&quot;</strong> (se empareja con tus tarjetas en Nummo por nombre o ultimos 4 digitos)
-                    </p>
+                      <p className="text-xs text-muted">Cambia el metodo a <strong>POST</strong></p>
+
+                      <p className="text-xs text-muted">
+                        Toca <strong>&quot;Cuerpo de la solicitud&quot;</strong>, cambialo a <strong>&quot;JSON&quot;</strong> y agrega:
+                      </p>
+
+                      <CopyField
+                        label="Clave 1"
+                        value="amount"
+                        copied={copiedField === 'ak1'}
+                        onCopy={() => copyToClipboard('amount', 'ak1')}
+                      />
+                      <p className="text-xs text-muted -mt-1">
+                        Valor: variable magica <strong>&quot;Monto&quot;</strong>
+                      </p>
+
+                      <CopyField
+                        label="Clave 2"
+                        value="merchant"
+                        copied={copiedField === 'ak2'}
+                        onCopy={() => copyToClipboard('merchant', 'ak2')}
+                      />
+                      <p className="text-xs text-muted -mt-1">
+                        Valor: variable magica <strong>&quot;Comercio&quot;</strong>
+                      </p>
+
+                      <CopyField
+                        label="Clave 3 (opcional)"
+                        value="card"
+                        copied={copiedField === 'ak3'}
+                        onCopy={() => copyToClipboard('card', 'ak3')}
+                      />
+                      <p className="text-xs text-muted -mt-1">
+                        Valor: variable magica <strong>&quot;Tarjeta&quot;</strong>
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => copyFullConfig(tokens[0].token)}
-                    className="flex-1"
-                  >
-                    {copiedField === 'full' ? <Check size={14} /> : <Copy size={14} />}
-                    {copiedField === 'full' ? 'Copiado' : 'Copiar todo'}
-                  </Button>
                   <Button
                     size="sm"
                     variant="outline"

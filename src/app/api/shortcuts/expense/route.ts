@@ -92,148 +92,157 @@ function respond(data: Record<string, unknown>, status: number) {
   return NextResponse.json(data, { status })
 }
 
-export async function POST(request: NextRequest) {
+function extractToken(request: NextRequest): string | null {
+  const auth = request.headers.get('authorization')
+  if (auth?.startsWith('Bearer ')) return auth.slice(7)
+  const queryToken = request.nextUrl.searchParams.get('token')
+  if (queryToken) return queryToken
+  return null
+}
+
+async function handleExpense(request: NextRequest, params: Record<string, unknown>) {
   const startTime = Date.now()
-  const contentType = request.headers.get('content-type') ?? '(vacío)'
-  const hasAuth = !!request.headers.get('authorization')
+  const method = request.method
 
   console.log('[Shortcuts] === Nueva petición ===')
-  console.log('[Shortcuts] Content-Type:', contentType)
-  console.log('[Shortcuts] Authorization presente:', hasAuth)
+  console.log('[Shortcuts] Método:', method)
+  console.log('[Shortcuts] Content-Type:', request.headers.get('content-type') ?? '(vacío)')
   console.log('[Shortcuts] User-Agent:', request.headers.get('user-agent') ?? '(vacío)')
 
+  const supabase = getAdminClient()
+  if (!supabase) {
+    return respond({ error: 'Servicio no configurado' }, 503)
+  }
+
+  const token = extractToken(request)
+  if (!token) {
+    console.warn('[Shortcuts] Sin token. Authorization:', request.headers.get('authorization') ?? 'null')
+    return respond({ error: 'Token requerido' }, 401)
+  }
+
+  console.log('[Shortcuts] Token: ...', token.slice(-6))
+
+  const { data: tokenRow, error: tokenError } = await supabase
+    .from('shortcuts_tokens')
+    .select('user_id, is_active')
+    .eq('token', token)
+    .single()
+
+  if (tokenError) {
+    console.error('[Shortcuts] Error BD token:', tokenError.message)
+  }
+  if (!tokenRow || !tokenRow.is_active) {
+    return respond({ error: 'Token inválido o desactivado' }, 401)
+  }
+
+  console.log('[Shortcuts] Token válido, user:', tokenRow.user_id)
+  console.log('[Shortcuts] Params recibidos:', JSON.stringify(params))
+  console.log('[Shortcuts] Tipos:', Object.fromEntries(
+    Object.entries(params).map(([k, v]) => [k, `${typeof v}: ${JSON.stringify(v)}`])
+  ))
+
+  const amount = parseAmount(params.amount)
+  const merchant = String(params.merchant || params.description || '').trim()
+  const cardHint = String(params.card || '')
+  const date = String(params.date || '') || todayMX()
+
+  console.log('[Shortcuts] Parseado:', { amount, merchant, cardHint, date })
+
+  if (!amount || isNaN(amount) || amount <= 0) {
+    return respond({
+      error: `Monto inválido. Recibido: ${JSON.stringify(params.amount)} (${typeof params.amount})`
+    }, 400)
+  }
+
+  const description = merchant || 'Gasto desde Shortcuts'
+
+  let cardId: string | null = null
+  let matchedCard: string | null = null
+
+  if (cardHint) {
+    const { data: cards } = await supabase
+      .from('cards')
+      .select('id, alias, last_four_digits, bank_name, card_type')
+      .eq('user_id', tokenRow.user_id)
+
+    if (cards?.length) {
+      const hint = cardHint.toLowerCase().trim()
+      const digits = hint.replace(/\D/g, '').slice(-4)
+
+      const match = cards.find(c => {
+        if (digits.length === 4 && c.last_four_digits === digits) return true
+        const alias = (c.alias || '').toLowerCase()
+        const bank = (c.bank_name || '').toLowerCase()
+        return alias.includes(hint) || bank.includes(hint) || hint.includes(alias)
+      })
+
+      if (match) {
+        cardId = match.id
+        matchedCard = match.alias
+      }
+    }
+    console.log('[Shortcuts] Tarjeta:', matchedCard ?? `no encontrada para "${cardHint}"`)
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  const category = apiKey ? await categorize(description, apiKey) : 'otros'
+
+  const { error } = await supabase.from('transactions').insert({
+    user_id: tokenRow.user_id,
+    amount,
+    description,
+    category,
+    type: 'expense',
+    card_id: cardId,
+    date,
+    is_recurring: false,
+    installment_months: null,
+    installment_current: null,
+    notes: 'Registrado desde Apple Shortcuts',
+    is_transfer: false,
+    currency: 'MXN',
+  })
+
+  if (error) {
+    return respond({ error: `Error al guardar: ${error.message}` }, 500)
+  }
+
+  const elapsed = Date.now() - startTime
+  const msg = `$${amount} - ${description} (${category})${matchedCard ? ` en ${matchedCard}` : ''}`
+  console.log('[Shortcuts] Guardado en', elapsed, 'ms:', msg)
+
+  return respond({ ok: true, message: `Gasto registrado: ${msg}` }, 200)
+}
+
+export async function GET(request: NextRequest) {
   try {
-    const supabase = getAdminClient()
-    if (!supabase) {
-      return respond({ error: 'Servicio no configurado (falta SUPABASE_SERVICE_ROLE_KEY)' }, 503)
+    const sp = request.nextUrl.searchParams
+    const params: Record<string, unknown> = {}
+    sp.forEach((v, k) => { if (k !== 'token') params[k] = v })
+
+    if (Object.keys(params).length === 0) {
+      return respond({ ok: true, service: 'Nummo Shortcuts', timestamp: new Date().toISOString() }, 200)
     }
 
-    const auth = request.headers.get('authorization')
-    const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null
-    if (!token) {
-      console.warn('[Shortcuts] Header Authorization recibido:', auth ? `"${auth.slice(0, 30)}..."` : 'null')
-      return respond(
-        { error: 'Token requerido. Agrega el header Authorization con valor: Bearer tu_token' },
-        401,
-      )
-    }
+    return await handleExpense(request, params)
+  } catch (err) {
+    console.error('[Shortcuts] Error no controlado (GET):', err)
+    return respond({ error: 'Error interno del servidor' }, 500)
+  }
+}
 
-    console.log('[Shortcuts] Token recibido: nmm_...', token.slice(-6))
-
-    const { data: tokenRow, error: tokenError } = await supabase
-      .from('shortcuts_tokens')
-      .select('user_id, is_active')
-      .eq('token', token)
-      .single()
-
-    if (tokenError) {
-      console.error('[Shortcuts] Error buscando token en BD:', tokenError.message)
-    }
-
-    if (!tokenRow || !tokenRow.is_active) {
-      return respond({ error: 'Token inválido o desactivado' }, 401)
-    }
-
-    console.log('[Shortcuts] Token válido, user_id:', tokenRow.user_id)
+export async function POST(request: NextRequest) {
+  try {
+    const sp = request.nextUrl.searchParams
+    const queryParams: Record<string, unknown> = {}
+    sp.forEach((v, k) => { if (k !== 'token') queryParams[k] = v })
 
     const body = await parseBody(request)
+    const params = { ...queryParams, ...body }
 
-    console.log('[Shortcuts] Body recibido:', JSON.stringify(body))
-    console.log('[Shortcuts] Tipos:', {
-      amount: typeof body.amount,
-      merchant: typeof body.merchant,
-      card: typeof body.card,
-      amountValue: body.amount,
-    })
-
-    if (!body || Object.keys(body).length === 0) {
-      return respond(
-        { error: 'No se recibieron datos. Asegúrate de enviar el cuerpo como JSON con los campos: amount, merchant' },
-        400,
-      )
-    }
-
-    const amount = parseAmount(body.amount)
-    const merchant = String(body.merchant || body.description || '').trim()
-    const cardHint = String(body.card || '')
-    const date = (body.date as string) || todayMX()
-
-    console.log('[Shortcuts] Datos parseados:', { amount, merchant, cardHint, date })
-
-    if (!amount || isNaN(amount) || amount <= 0) {
-      return respond(
-        { error: `Monto inválido. Se recibió: ${JSON.stringify(body.amount)} (tipo: ${typeof body.amount}). Envía un número positivo en el campo "amount".` },
-        400,
-      )
-    }
-
-    const description = merchant || 'Gasto desde Shortcuts'
-
-    let cardId: string | null = null
-    let matchedCard: string | null = null
-
-    if (cardHint) {
-      const { data: cards } = await supabase
-        .from('cards')
-        .select('id, alias, last_four_digits, bank_name, card_type')
-        .eq('user_id', tokenRow.user_id)
-
-      if (cards?.length) {
-        const hint = cardHint.toLowerCase().trim()
-        const digits = hint.replace(/\D/g, '').slice(-4)
-
-        const match = cards.find(c => {
-          if (digits.length === 4 && c.last_four_digits === digits) return true
-          const alias = (c.alias || '').toLowerCase()
-          const bank = (c.bank_name || '').toLowerCase()
-          return alias.includes(hint) || bank.includes(hint) || hint.includes(alias)
-        })
-
-        if (match) {
-          cardId = match.id
-          matchedCard = match.alias
-        }
-      }
-      console.log('[Shortcuts] Tarjeta:', matchedCard ? `encontrada (${matchedCard})` : `no encontrada para "${cardHint}"`)
-    }
-
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    const category = apiKey ? await categorize(description, apiKey) : 'otros'
-
-    console.log('[Shortcuts] Categoría:', category)
-
-    const { error } = await supabase.from('transactions').insert({
-      user_id: tokenRow.user_id,
-      amount,
-      description,
-      category,
-      type: 'expense',
-      card_id: cardId,
-      date,
-      is_recurring: false,
-      installment_months: null,
-      installment_current: null,
-      notes: 'Registrado desde Apple Shortcuts',
-      is_transfer: false,
-      currency: 'MXN',
-    })
-
-    if (error) {
-      return respond({ error: `Error al guardar: ${error.message}` }, 500)
-    }
-
-    const elapsed = Date.now() - startTime
-    console.log('[Shortcuts] Gasto guardado en', elapsed, 'ms')
-
-    return respond({
-      ok: true,
-      message: `Gasto registrado: $${amount} - ${description} (${category})${matchedCard ? ` en ${matchedCard}` : ''}`,
-    }, 200)
+    return await handleExpense(request, params)
   } catch (err) {
-    console.error('[Shortcuts] Error no controlado:', err)
-    return respond(
-      { error: 'Error interno del servidor. Revisa los logs para más detalles.' },
-      500,
-    )
+    console.error('[Shortcuts] Error no controlado (POST):', err)
+    return respond({ error: 'Error interno del servidor' }, 500)
   }
 }
