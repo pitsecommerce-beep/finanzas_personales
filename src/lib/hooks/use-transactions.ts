@@ -4,12 +4,15 @@ import { useEffect, useState, useCallback } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import type { Transaction } from '@/types/database'
 
+const TX_SELECT = '*, card:cards!transactions_card_id_fkey(*), transfer_from_card:cards!transactions_transfer_from_card_id_fkey(id, alias, bank_name, card_type), transfer_to_card:cards!transactions_transfer_to_card_id_fkey(id, alias, bank_name, card_type)'
+
 interface UseTransactionsOptions {
   type?: 'expense' | 'income'
   cardId?: string
   startDate?: string
   endDate?: string
   category?: string
+  isTransfer?: boolean
 }
 
 export function useTransactions(options: UseTransactionsOptions = {}) {
@@ -26,7 +29,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       const supabase = createClient()
       let query = supabase
         .from('transactions')
-        .select('*, card:cards!transactions_card_id_fkey(*)')
+        .select(TX_SELECT)
         .order('date', { ascending: false })
 
       if (options.type) query = query.eq('type', options.type)
@@ -34,6 +37,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       if (options.startDate) query = query.gte('date', options.startDate)
       if (options.endDate) query = query.lte('date', options.endDate)
       if (options.category) query = query.eq('category', options.category)
+      if (options.isTransfer !== undefined) query = query.eq('is_transfer', options.isTransfer)
 
       const { data } = await query
       setTransactions(data ?? [])
@@ -41,7 +45,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       console.warn('[Nummo] Error al cargar transacciones:', err)
     }
     setLoading(false)
-  }, [options.type, options.cardId, options.startDate, options.endDate, options.category])
+  }, [options.type, options.cardId, options.startDate, options.endDate, options.category, options.isTransfer])
 
   useEffect(() => {
     fetchTransactions()
@@ -83,6 +87,16 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       .eq('id', cardId)
   }
 
+  async function reverseBalances(tx: Transaction) {
+    if (tx.is_transfer) {
+      if (tx.transfer_from_card_id) await updateCardBalance(tx.transfer_from_card_id, tx.amount, 'income')
+      if (tx.transfer_to_card_id) await updateCardBalance(tx.transfer_to_card_id, tx.amount, 'expense')
+    } else if (tx.card_id) {
+      const reverseType = tx.type === 'expense' ? 'income' : 'expense'
+      await updateCardBalance(tx.card_id, tx.amount, reverseType as 'expense' | 'income')
+    }
+  }
+
   async function addTransaction(
     transaction: Record<string, unknown>
   ) {
@@ -95,7 +109,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       const { data, error } = await supabase
         .from('transactions')
         .insert({ ...transaction, user_id: user.id })
-        .select('*, card:cards!transactions_card_id_fkey(*)')
+        .select(TX_SELECT)
         .single()
 
       if (error) {
@@ -128,16 +142,25 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
   async function deleteTransaction(id: string) {
     if (!isSupabaseConfigured()) return { error: { message: 'BD no configurada' } }
     const supabase = createClient()
-
     const tx = transactions.find((t) => t.id === id)
-
     const { error } = await supabase.from('transactions').delete().eq('id', id)
     if (!error) {
-      if (tx?.card_id) {
-        const reverseType = tx.type === 'expense' ? 'income' : 'expense'
-        await updateCardBalance(tx.card_id, tx.amount, reverseType as 'expense' | 'income')
-      }
+      if (tx) await reverseBalances(tx)
       setTransactions((prev) => prev.filter((t) => t.id !== id))
+    }
+    return { error }
+  }
+
+  async function deleteTransactions(ids: string[]) {
+    if (!isSupabaseConfigured()) return { error: { message: 'BD no configurada' } }
+    const supabase = createClient()
+    const toDelete = transactions.filter((t) => ids.includes(t.id))
+    const { error } = await supabase.from('transactions').delete().in('id', ids)
+    if (!error) {
+      for (const tx of toDelete) {
+        await reverseBalances(tx)
+      }
+      setTransactions((prev) => prev.filter((t) => !ids.includes(t.id)))
     }
     return { error }
   }
@@ -149,7 +172,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       .from('transactions')
       .update(updates)
       .eq('id', id)
-      .select('*, card:cards!transactions_card_id_fkey(*)')
+      .select(TX_SELECT)
       .single()
 
     if (!error && data) {
@@ -158,5 +181,5 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
     return { data, error }
   }
 
-  return { transactions, loading, addTransaction, updateTransaction, deleteTransaction, refetch: fetchTransactions }
+  return { transactions, loading, addTransaction, updateTransaction, deleteTransaction, deleteTransactions, refetch: fetchTransactions }
 }

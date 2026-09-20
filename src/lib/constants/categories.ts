@@ -15,6 +15,8 @@ export const EXPENSE_CATEGORIES = [
   { id: 'cafe', label: 'Café', emoji: '☕' },
   { id: 'gimnasio', label: 'Gimnasio', emoji: '💪' },
   { id: 'otros', label: 'Otros', emoji: '📦' },
+  { id: 'traspaso', label: 'Traspaso', emoji: '🔄' },
+  { id: 'pago_credito', label: 'Pago a tarjeta', emoji: '💳' },
 ] as const
 
 export const INCOME_CATEGORIES = [

@@ -53,6 +53,8 @@ export interface Transaction {
   exchange_rate: number | null
   created_at: string
   card?: Card
+  transfer_from_card?: Card
+  transfer_to_card?: Card
 }
 
 export interface FixedExpense {

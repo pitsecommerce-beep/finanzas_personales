@@ -21,7 +21,13 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ type, transaction, onSuccess }: TransactionFormProps) {
-  const [amount, setAmount] = useState(transaction?.amount?.toString() ?? '')
+  const [amount, setAmount] = useState(() => {
+    if (!transaction) return ''
+    if (transaction.currency === 'USD' && transaction.exchange_rate) {
+      return (transaction.amount / transaction.exchange_rate).toFixed(2)
+    }
+    return transaction.amount.toString()
+  })
   const [description, setDescription] = useState(transaction?.description ?? '')
   const [category, setCategory] = useState(transaction?.category ?? (type === 'expense' ? 'otros' : 'nomina'))
   const [cardId, setCardId] = useState<string | null>(transaction?.card_id ?? null)
