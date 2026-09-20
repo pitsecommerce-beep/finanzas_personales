@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import type { Transaction } from '@/types/database'
 
-const TX_SELECT = '*, card:cards!transactions_card_id_fkey(*), transfer_from_card:cards!transactions_transfer_from_card_id_fkey(id, alias, bank_name, card_type), transfer_to_card:cards!transactions_transfer_to_card_id_fkey(id, alias, bank_name, card_type)'
+const TX_SELECT = '*, card:cards!transactions_card_id_fkey(*), transfer_from_card:cards!transfer_from_card_id(id, alias, bank_name, card_type), transfer_to_card:cards!transfer_to_card_id(id, alias, bank_name, card_type)'
 
 interface UseTransactionsOptions {
   type?: 'expense' | 'income'
