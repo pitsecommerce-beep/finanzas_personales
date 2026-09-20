@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2, Pencil } from 'lucide-react'
+import { Plus, Trash2, Pencil, CheckSquare, X } from 'lucide-react'
 import { useIncome } from '@/lib/hooks/use-income'
 import { useTransactions } from '@/lib/hooks/use-transactions'
 import { TransactionList } from '@/components/transactions/transaction-list'
@@ -31,12 +31,15 @@ const TYPE_LABELS: Record<string, string> = {
 
 export default function IngresosPage() {
   const { sources, loading: sourcesLoading, deleteSource, refetch: refetchSources } = useIncome()
-  const { transactions, loading: txLoading, deleteTransaction, refetch: refetchTx } = useTransactions({ type: 'income' })
+  const { transactions, loading: txLoading, deleteTransaction, deleteTransactions, refetch: refetchTx } = useTransactions({ type: 'income' })
   const [showIncomeForm, setShowIncomeForm] = useState(false)
   const [editingSource, setEditingSource] = useState<IncomeSource | null>(null)
   const [showTxForm, setShowTxForm] = useState(false)
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; kind: 'source' | 'tx' } | null>(null)
+  const [selectable, setSelectable] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBulkDelete, setShowBulkDelete] = useState(false)
   const { toast } = useToast()
 
   async function confirmDelete() {
@@ -48,6 +51,25 @@ export default function IngresosPage() {
     }
     toast('Eliminado', 'success')
     setDeleteTarget(null)
+  }
+
+  async function confirmBulkDelete() {
+    const ids = Array.from(selectedIds)
+    const { error } = await deleteTransactions(ids)
+    if (error) toast('Error al eliminar', 'error')
+    else toast(`${ids.length} ingresos eliminados`, 'success')
+    setShowBulkDelete(false)
+    setSelectedIds(new Set())
+    setSelectable(false)
+  }
+
+  function selectAll() {
+    setSelectedIds(new Set(transactions.map(t => t.id)))
+  }
+
+  function cancelSelection() {
+    setSelectable(false)
+    setSelectedIds(new Set())
   }
 
   const loading = sourcesLoading || txLoading
@@ -65,12 +87,35 @@ export default function IngresosPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Ingresos</h1>
         <div className="flex gap-2">
-          <Button onClick={() => setShowIncomeForm(true)} size="sm" variant="outline">
-            <Plus size={16} /> Fuente
-          </Button>
-          <Button onClick={() => setShowTxForm(true)} size="sm">
-            <Plus size={16} /> Ingreso
-          </Button>
+          {!selectable ? (
+            <>
+              {transactions.length > 0 && (
+                <Button variant="outline" size="sm" onClick={() => setSelectable(true)}>
+                  <CheckSquare size={14} /> Seleccionar
+                </Button>
+              )}
+              <Button onClick={() => setShowIncomeForm(true)} size="sm" variant="outline">
+                <Plus size={16} /> Fuente
+              </Button>
+              <Button onClick={() => setShowTxForm(true)} size="sm">
+                <Plus size={16} /> Ingreso
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" onClick={selectAll}>
+                Todos ({transactions.length})
+              </Button>
+              <Button variant="outline" size="sm" onClick={cancelSelection}>
+                <X size={14} /> Cancelar
+              </Button>
+              {selectedIds.size > 0 && (
+                <Button variant="danger" size="sm" onClick={() => setShowBulkDelete(true)}>
+                  <Trash2 size={14} /> Eliminar ({selectedIds.size})
+                </Button>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -113,8 +158,11 @@ export default function IngresosPage() {
         <h2 className="font-semibold text-sm mb-3">Historial de ingresos</h2>
         <TransactionList
           transactions={transactions}
-          onEdit={(tx) => setEditingTx(tx)}
-          onDelete={(id) => setDeleteTarget({ id, kind: 'tx' })}
+          onEdit={selectable ? undefined : (tx) => setEditingTx(tx)}
+          onDelete={selectable ? undefined : (id) => setDeleteTarget({ id, kind: 'tx' })}
+          selectable={selectable}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
         />
       </div>
 
@@ -141,10 +189,19 @@ export default function IngresosPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         title="Eliminar registro"
-        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
+        message="Esta accion no se puede deshacer. ¿Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={showBulkDelete}
+        title={`Eliminar ${selectedIds.size} ingresos`}
+        message={`Se eliminaran ${selectedIds.size} ingresos. Esta accion no se puede deshacer.`}
+        confirmLabel="Eliminar todos"
+        onConfirm={confirmBulkDelete}
+        onCancel={() => setShowBulkDelete(false)}
       />
     </div>
   )

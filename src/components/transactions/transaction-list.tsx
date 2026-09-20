@@ -11,9 +11,19 @@ interface TransactionListProps {
   onEdit?: (transaction: Transaction) => void
   onDelete?: (id: string) => void
   showType?: boolean
+  selectable?: boolean
+  selectedIds?: Set<string>
+  onSelectionChange?: (ids: Set<string>) => void
 }
 
-export function TransactionList({ transactions, onEdit, onDelete, showType = false }: TransactionListProps) {
+function transferLabel(t: Transaction): string {
+  const from = t.transfer_from_card?.alias ?? 'Cuenta'
+  const to = t.transfer_to_card?.alias ?? 'Cuenta'
+  if (t.category === 'pago_credito') return `Pago a ${to}`
+  return `Traspaso de ${from} a ${to}`
+}
+
+export function TransactionList({ transactions, onEdit, onDelete, showType = false, selectable, selectedIds, onSelectionChange }: TransactionListProps) {
   if (transactions.length === 0) {
     return (
       <div className="text-center py-12 text-muted">
@@ -21,6 +31,14 @@ export function TransactionList({ transactions, onEdit, onDelete, showType = fal
         <p className="text-sm">No hay movimientos registrados</p>
       </div>
     )
+  }
+
+  function toggleSelection(id: string) {
+    if (!onSelectionChange || !selectedIds) return
+    const next = new Set(selectedIds)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    onSelectionChange(next)
   }
 
   const grouped = transactions.reduce<Record<string, Transaction[]>>((acc, t) => {
@@ -36,41 +54,54 @@ export function TransactionList({ transactions, onEdit, onDelete, showType = fal
         <div key={date}>
           <p className="text-xs font-medium text-muted mb-2">{formatShortDate(date)}</p>
           <div className="bg-white rounded-xl border border-border divide-y divide-border">
-            {items.map((t) => (
-              <div key={t.id} className="flex items-center gap-3 px-4 py-3">
-                <span className="text-xl">{getCategoryEmoji(t.category)}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{t.description}</p>
-                  <p className="text-xs text-muted">
-                    {getCategoryLabel(t.category)}
-                    {t.card && ` · ${t.card.alias}`}
-                  </p>
+            {items.map((t) => {
+              const isTransfer = t.is_transfer
+              return (
+                <div key={t.id} className="flex items-center gap-3 px-4 py-3">
+                  {selectable && (
+                    <input
+                      type="checkbox"
+                      checked={selectedIds?.has(t.id) ?? false}
+                      onChange={() => toggleSelection(t.id)}
+                      className="w-4 h-4 rounded border-border text-accent focus:ring-accent/50 shrink-0"
+                    />
+                  )}
+                  <span className="text-xl">{getCategoryEmoji(t.category)}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {isTransfer ? transferLabel(t) : t.description}
+                    </p>
+                    <p className="text-xs text-muted">
+                      {getCategoryLabel(t.category)}
+                      {!isTransfer && t.card && ` · ${t.card.alias}`}
+                    </p>
+                  </div>
+                  <span
+                    className={`text-sm font-semibold whitespace-nowrap ${
+                      isTransfer ? 'text-blue-600' : t.type === 'expense' ? 'text-danger' : 'text-success'
+                    }`}
+                  >
+                    {isTransfer ? '' : t.type === 'expense' ? '-' : '+'}{formatMXN(t.amount)}
+                  </span>
+                  {onEdit && !selectable && (
+                    <button
+                      onClick={() => onEdit(t)}
+                      className="text-muted hover:text-accent p-1"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  )}
+                  {onDelete && !selectable && (
+                    <button
+                      onClick={() => onDelete(t.id)}
+                      className="text-muted hover:text-danger p-1"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
-                <span
-                  className={`text-sm font-semibold whitespace-nowrap ${
-                    t.type === 'expense' ? 'text-danger' : 'text-success'
-                  }`}
-                >
-                  {t.type === 'expense' ? '-' : '+'}{formatMXN(t.amount)}
-                </span>
-                {onEdit && (
-                  <button
-                    onClick={() => onEdit(t)}
-                    className="text-muted hover:text-accent p-1"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                )}
-                {onDelete && (
-                  <button
-                    onClick={() => onDelete(t.id)}
-                    className="text-muted hover:text-danger p-1"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       ))}

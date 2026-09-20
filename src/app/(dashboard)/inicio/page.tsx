@@ -34,7 +34,7 @@ export default function InicioPage() {
         const [txRes, cardRes] = await Promise.all([
           supabase
             .from('transactions')
-            .select('*, card:cards!transactions_card_id_fkey(*)')
+            .select('*, card:cards!transactions_card_id_fkey(*), transfer_from_card:cards!transactions_transfer_from_card_id_fkey(id, alias, bank_name, card_type), transfer_to_card:cards!transactions_transfer_to_card_id_fkey(id, alias, bank_name, card_type)')
             .gte('date', startOfMonth)
             .order('date', { ascending: false }),
           supabase.from('cards').select('*').order('created_at', { ascending: false }),

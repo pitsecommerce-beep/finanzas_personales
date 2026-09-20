@@ -12,6 +12,17 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import type { Card } from '@/types/database'
 
+const TYPE_ORDER = ['credit', 'debit', 'cash', 'savings', 'voucher', 'investment'] as const
+
+const TYPE_LABELS: Record<string, string> = {
+  credit: 'Tarjetas de credito',
+  debit: 'Tarjetas de debito',
+  cash: 'Efectivo',
+  savings: 'Cuentas de ahorro',
+  voucher: 'Vales',
+  investment: 'Inversiones',
+}
+
 export default function TarjetasPage() {
   const router = useRouter()
   const { cards, loading, deleteCard, refetch } = useCards()
@@ -45,11 +56,20 @@ export default function TarjetasPage() {
     )
   }
 
+  const grouped: Record<string, Card[]> = {}
+  for (const card of cards) {
+    const type = card.card_type
+    if (!grouped[type]) grouped[type] = []
+    grouped[type].push(card)
+  }
+
+  const orderedTypes = TYPE_ORDER.filter(t => grouped[t]?.length)
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Tarjetas y efectivo</h1>
+          <h1 className="text-2xl font-bold">Tarjetas y cuentas</h1>
           <p className="text-sm text-muted">{cards.length} registros</p>
         </div>
         <Button onClick={() => setShowForm(true)} size="sm">
@@ -64,15 +84,22 @@ export default function TarjetasPage() {
           <Button onClick={() => setShowForm(true)}>Agregar</Button>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 gap-4">
-          {cards.map((card) => (
-            <CardItem
-              key={card.id}
-              card={card}
-              onView={(c) => router.push(`/tarjetas/${c.id}`)}
-              onEdit={handleEdit}
-              onDelete={(id) => setDeleteId(id)}
-            />
+        <div className="space-y-6">
+          {orderedTypes.map(type => (
+            <div key={type}>
+              <h2 className="font-semibold text-sm text-muted mb-3">{TYPE_LABELS[type] ?? type}</h2>
+              <div className="grid sm:grid-cols-2 gap-4">
+                {grouped[type].map((card) => (
+                  <CardItem
+                    key={card.id}
+                    card={card}
+                    onView={(c) => router.push(`/tarjetas/${c.id}`)}
+                    onEdit={handleEdit}
+                    onDelete={(id) => setDeleteId(id)}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -90,7 +117,7 @@ export default function TarjetasPage() {
       <ConfirmDialog
         open={!!deleteId}
         title="Eliminar tarjeta"
-        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
+        message="Esta accion no se puede deshacer. ¿Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}
