@@ -372,7 +372,7 @@ export default function ConfiguracionPage() {
                         <p className="text-[10px] font-semibold text-accent uppercase tracking-wide">Encabezados</p>
                         <p>Toca <strong>&quot;Encabezados&quot;</strong> para expandirlo. Agrega <strong>un encabezado</strong> con estos valores:</p>
                       </div>
-                      <ConfigRow label="Encabezado 1" field="Clave" value="Authorization" />
+                      <CopyField label="Clave del encabezado" value="Authorization" copied={copiedField === 'mkey'} onCopy={() => copyToClipboard('Authorization', 'mkey')} />
                       <CopyField label="Valor del encabezado" value={`Bearer ${tokens[0].token}`} copied={copiedField === 'mauth'} onCopy={() => copyToClipboard(`Bearer ${tokens[0].token}`, 'mauth')} />
 
                       <div className="mt-3 space-y-2">
@@ -386,13 +386,17 @@ export default function ConfiguracionPage() {
                           <div className="px-2 py-1.5">Tipo</div>
                           <div className="px-2 py-1.5">Valor</div>
                         </div>
-                        <div className="grid grid-cols-3 text-xs border-b border-border">
-                          <div className="px-2 py-1.5 font-mono">amount</div>
+                        <div className="grid grid-cols-3 text-xs border-b border-border items-center">
+                          <button type="button" onClick={() => copyToClipboard('amount', 'json-mamount')} className="px-2 py-1.5 font-mono text-left flex items-center gap-1 hover:text-accent transition-colors">
+                            amount {copiedField === 'json-mamount' ? <Check size={10} className="text-success" /> : <Copy size={10} className="text-muted" />}
+                          </button>
                           <div className="px-2 py-1.5 text-muted">Numero</div>
                           <div className="px-2 py-1.5 text-accent font-medium">Entrada proporcionada (del paso &quot;Cuanto gastaste?&quot;)</div>
                         </div>
-                        <div className="grid grid-cols-3 text-xs">
-                          <div className="px-2 py-1.5 font-mono">merchant</div>
+                        <div className="grid grid-cols-3 text-xs items-center">
+                          <button type="button" onClick={() => copyToClipboard('merchant', 'json-mmerchant')} className="px-2 py-1.5 font-mono text-left flex items-center gap-1 hover:text-accent transition-colors">
+                            merchant {copiedField === 'json-mmerchant' ? <Check size={10} className="text-success" /> : <Copy size={10} className="text-muted" />}
+                          </button>
                           <div className="px-2 py-1.5 text-muted">Texto</div>
                           <div className="px-2 py-1.5 text-accent font-medium">Entrada proporcionada (del paso &quot;En donde compraste?&quot;)</div>
                         </div>
@@ -432,7 +436,7 @@ export default function ConfiguracionPage() {
                         <p className="text-[10px] font-semibold text-accent uppercase tracking-wide">Encabezados</p>
                         <p>Expande <strong>&quot;Encabezados&quot;</strong> y agrega uno:</p>
                       </div>
-                      <ConfigRow label="Encabezado 1" field="Clave" value="Authorization" />
+                      <CopyField label="Clave del encabezado" value="Authorization" copied={copiedField === 'akey'} onCopy={() => copyToClipboard('Authorization', 'akey')} />
                       <CopyField label="Valor del encabezado" value={`Bearer ${tokens[0].token}`} copied={copiedField === 'aauth'} onCopy={() => copyToClipboard(`Bearer ${tokens[0].token}`, 'aauth')} />
 
                       <div className="mt-3 space-y-2">
@@ -446,18 +450,24 @@ export default function ConfiguracionPage() {
                           <div className="px-2 py-1.5">Tipo</div>
                           <div className="px-2 py-1.5">Valor</div>
                         </div>
-                        <div className="grid grid-cols-3 text-xs border-b border-border">
-                          <div className="px-2 py-1.5 font-mono">amount</div>
+                        <div className="grid grid-cols-3 text-xs border-b border-border items-center">
+                          <button type="button" onClick={() => copyToClipboard('amount', 'json-aamount')} className="px-2 py-1.5 font-mono text-left flex items-center gap-1 hover:text-accent transition-colors">
+                            amount {copiedField === 'json-aamount' ? <Check size={10} className="text-success" /> : <Copy size={10} className="text-muted" />}
+                          </button>
                           <div className="px-2 py-1.5 text-muted">Numero</div>
                           <div className="px-2 py-1.5 text-accent font-medium">Var. magica: Monto</div>
                         </div>
-                        <div className="grid grid-cols-3 text-xs border-b border-border">
-                          <div className="px-2 py-1.5 font-mono">merchant</div>
+                        <div className="grid grid-cols-3 text-xs border-b border-border items-center">
+                          <button type="button" onClick={() => copyToClipboard('merchant', 'json-amerchant')} className="px-2 py-1.5 font-mono text-left flex items-center gap-1 hover:text-accent transition-colors">
+                            merchant {copiedField === 'json-amerchant' ? <Check size={10} className="text-success" /> : <Copy size={10} className="text-muted" />}
+                          </button>
                           <div className="px-2 py-1.5 text-muted">Texto</div>
                           <div className="px-2 py-1.5 text-accent font-medium">Var. magica: Comercio</div>
                         </div>
-                        <div className="grid grid-cols-3 text-xs">
-                          <div className="px-2 py-1.5 font-mono">card</div>
+                        <div className="grid grid-cols-3 text-xs items-center">
+                          <button type="button" onClick={() => copyToClipboard('card', 'json-acard')} className="px-2 py-1.5 font-mono text-left flex items-center gap-1 hover:text-accent transition-colors">
+                            card {copiedField === 'json-acard' ? <Check size={10} className="text-success" /> : <Copy size={10} className="text-muted" />}
+                          </button>
                           <div className="px-2 py-1.5 text-muted">Texto</div>
                           <div className="px-2 py-1.5 text-accent font-medium">Var. magica: Tarjeta (opcional)</div>
                         </div>
