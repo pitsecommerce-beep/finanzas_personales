@@ -12,8 +12,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No se recibió audio' }, { status: 400 })
   }
 
+  const originalName = (audio as File).name || 'audio.webm'
   const whisperForm = new FormData()
-  whisperForm.append('file', audio, 'audio.webm')
+  whisperForm.append('file', audio, originalName)
   whisperForm.append('model', 'whisper-1')
   whisperForm.append('language', 'es')
 
