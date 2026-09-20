@@ -9,10 +9,25 @@ type ConversationMessage = {
   content: unknown
 }
 
+function getSupportedMimeType(): { mimeType: string; ext: string } {
+  if (typeof MediaRecorder === 'undefined') return { mimeType: '', ext: 'webm' }
+  const candidates = [
+    { mimeType: 'audio/webm;codecs=opus', ext: 'webm' },
+    { mimeType: 'audio/webm', ext: 'webm' },
+    { mimeType: 'audio/mp4', ext: 'mp4' },
+    { mimeType: 'audio/aac', ext: 'aac' },
+    { mimeType: 'audio/ogg;codecs=opus', ext: 'ogg' },
+    { mimeType: 'audio/wav', ext: 'wav' },
+  ]
+  for (const c of candidates) {
+    if (MediaRecorder.isTypeSupported(c.mimeType)) return c
+  }
+  return { mimeType: '', ext: 'webm' }
+}
+
 function AudioWaveform({ stream }: { stream: MediaStream | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animRef = useRef<number>(0)
-  const analyserRef = useRef<AnalyserNode | null>(null)
 
   useEffect(() => {
     if (!stream || !canvasRef.current) return
@@ -23,7 +38,6 @@ function AudioWaveform({ stream }: { stream: MediaStream | null }) {
     analyser.fftSize = 256
     analyser.smoothingTimeConstant = 0.8
     source.connect(analyser)
-    analyserRef.current = analyser
 
     const canvas = canvasRef.current
     const canvasCtx = canvas.getContext('2d')!
@@ -31,7 +45,6 @@ function AudioWaveform({ stream }: { stream: MediaStream | null }) {
     const dataArray = new Uint8Array(bufferLength)
 
     const barCount = 40
-    const history: number[][] = []
 
     function draw() {
       animRef.current = requestAnimationFrame(draw)
@@ -47,9 +60,6 @@ function AudioWaveform({ stream }: { stream: MediaStream | null }) {
         current.push(sum / step / 255)
       }
 
-      history.push(current)
-      if (history.length > 60) history.shift()
-
       const dpr = window.devicePixelRatio || 1
       canvas.width = canvas.offsetWidth * dpr
       canvas.height = canvas.offsetHeight * dpr
@@ -60,21 +70,19 @@ function AudioWaveform({ stream }: { stream: MediaStream | null }) {
 
       canvasCtx.clearRect(0, 0, w, h)
 
-      const totalBars = barCount
       const barWidth = 3
       const gap = 2
-      const totalWidth = totalBars * (barWidth + gap)
+      const totalWidth = barCount * (barWidth + gap)
       const startX = w - totalWidth
 
-      const latest = history[history.length - 1]
-      for (let i = 0; i < totalBars; i++) {
-        const val = latest[i] ?? 0
+      for (let i = 0; i < barCount; i++) {
+        const val = current[i] ?? 0
         const barH = Math.max(2, val * h * 0.9)
         const x = startX + i * (barWidth + gap)
         const y = (h - barH) / 2
 
         const alpha = 0.3 + val * 0.7
-        const xRatio = i / totalBars
+        const xRatio = i / barCount
         const fadeAlpha = xRatio < 0.3 ? xRatio / 0.3 : 1
 
         canvasCtx.fillStyle = `rgba(20, 184, 166, ${alpha * fadeAlpha})`
@@ -114,12 +122,26 @@ export function VoiceEntry() {
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null)
   const mediaRecorder = useRef<MediaRecorder | null>(null)
   const chunks = useRef<Blob[]>([])
+  const audioFormat = useRef(getSupportedMimeType())
 
   const startRecording = useCallback(async () => {
     try {
+      setError('')
+      setResponse('')
+      setQuestion('')
+      setActions([])
+      setConversation(null)
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       setMediaStream(stream)
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+
+      const format = getSupportedMimeType()
+      audioFormat.current = format
+
+      const recorderOptions: MediaRecorderOptions = {}
+      if (format.mimeType) recorderOptions.mimeType = format.mimeType
+
+      const recorder = new MediaRecorder(stream, recorderOptions)
       chunks.current = []
 
       recorder.ondataavailable = (e) => {
@@ -129,20 +151,24 @@ export function VoiceEntry() {
       recorder.onstop = async () => {
         stream.getTracks().forEach(t => t.stop())
         setMediaStream(null)
-        const blob = new Blob(chunks.current, { type: 'audio/webm' })
+        const blob = new Blob(chunks.current, {
+          type: format.mimeType || 'audio/webm',
+        })
         await processAudio(blob)
       }
 
       recorder.start()
       mediaRecorder.current = recorder
       setRecording(true)
-      setResponse('')
-      setError('')
-      setQuestion('')
-      setActions([])
-      setConversation(null)
-    } catch {
-      setError('No se pudo acceder al micrófono. Verifica los permisos.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : ''
+      if (msg.includes('NotAllowedError') || msg.includes('Permission')) {
+        setError('Permiso de micrófono denegado. Ve a Ajustes > Safari > Micrófono y permite el acceso para este sitio.')
+      } else if (msg.includes('NotFoundError')) {
+        setError('No se encontró micrófono en este dispositivo.')
+      } else {
+        setError('No se pudo acceder al micrófono. Verifica los permisos en Ajustes del navegador.')
+      }
     }
   }, [])
 
@@ -160,7 +186,7 @@ export function VoiceEntry() {
 
     try {
       const formData = new FormData()
-      formData.append('audio', blob)
+      formData.append('audio', blob, `audio.${audioFormat.current.ext}`)
       const transcribeRes = await fetch('/api/voice/transcribe', { method: 'POST', body: formData })
       if (!transcribeRes.ok) {
         const data = await transcribeRes.json().catch(() => ({}))
