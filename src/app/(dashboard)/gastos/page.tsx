@@ -109,7 +109,7 @@ export default function GastosPage() {
 
       <Modal open={!!editingTx} onClose={() => setEditingTx(null)} title="Editar gasto">
         {editingTx && (
-          <TransactionForm type="expense" transaction={editingTx} onSuccess={() => { setEditingTx(null); refetch() }} />
+          <TransactionForm type="expense" entry={editingTx} onSuccess={() => { setEditingTx(null); refetch() }} />
         )}
       </Modal>
 
