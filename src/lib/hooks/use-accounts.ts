@@ -20,7 +20,7 @@ export function useAccounts() {
       const { data } = await supabase
         .from('accounts')
         .select('*')
-        .order('due_date', { ascending: true, nullsFirst: false })
+        .order('payment_day', { ascending: true, nullsFirst: false })
       setAccounts(data ?? [])
     } catch (err) {
       console.warn('[Nummo] Error al cargar cuentas:', err)
@@ -41,9 +41,6 @@ export function useAccounts() {
     const adjustedAccount = {
       ...account,
       user_id: user.id,
-      due_date: account.due_date
-        ? adjustDateToBusinessDay(account.due_date)
-        : null,
     }
 
     const { data, error } = await supabase
@@ -61,14 +58,7 @@ export function useAccounts() {
   async function updateAccount(id: string, updates: Partial<Account>) {
     if (!isSupabaseConfigured()) return { data: null, error: { message: 'BD no configurada' } }
     const supabase = createClient()
-    const adjustedUpdates = {
-      ...updates,
-      ...(updates.due_date !== undefined && {
-        due_date: updates.due_date
-          ? adjustDateToBusinessDay(updates.due_date)
-          : null,
-      }),
-    }
+    const adjustedUpdates = { ...updates }
 
     const { data, error } = await supabase
       .from('accounts')

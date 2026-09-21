@@ -273,13 +273,14 @@ INSERT INTO accounts_v2 (
 SELECT
   c.id,
   c.user_id,
-  CASE c.card_type
+  CASE c.card_type::text
     WHEN 'credit' THEN 'credit_card'::account_type_v2
     WHEN 'debit' THEN 'debit'::account_type_v2
     WHEN 'cash' THEN 'cash'::account_type_v2
     WHEN 'savings' THEN 'savings'::account_type_v2
     WHEN 'voucher' THEN 'voucher'::account_type_v2
     WHEN 'investment' THEN 'investment'::account_type_v2
+    ELSE 'debit'::account_type_v2
   END,
   c.bank_name,
   c.alias,
