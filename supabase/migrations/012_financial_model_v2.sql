@@ -289,9 +289,9 @@ SELECT
   c.color,
   'MXN',
   true,
-  CASE WHEN c.card_type = 'credit' THEN c.cut_off_day ELSE NULL END,
-  CASE WHEN c.card_type = 'credit' THEN c.payment_day ELSE NULL END,
-  CASE WHEN c.card_type = 'credit' THEN c.credit_limit ELSE NULL END,
+  CASE WHEN c.card_type::text = 'credit' THEN c.cut_off_day ELSE NULL END,
+  CASE WHEN c.card_type::text = 'credit' THEN c.payment_day ELSE NULL END,
+  CASE WHEN c.card_type::text = 'credit' THEN c.credit_limit ELSE NULL END,
   0,
   CURRENT_DATE,
   COALESCE(c.has_yields, false),
@@ -325,20 +325,7 @@ SELECT c.id, 25000, c.yield_rate_above_limit
 FROM cards c
 WHERE c.has_yields = true AND c.yield_rate_above_limit IS NOT NULL;
 
--- Log investment metadata to migration_review
-INSERT INTO migration_review (source_table, source_id, reason, data)
-SELECT
-  'cards', c.id, 'investment_metadata_not_migrated',
-  jsonb_build_object(
-    'investment_platform', c.investment_platform,
-    'investment_ticker', c.investment_ticker,
-    'investment_shares', c.investment_shares,
-    'investment_buy_price', c.investment_buy_price,
-    'investment_buy_date', c.investment_buy_date
-  )
-FROM cards c
-WHERE c.card_type = 'investment'
-  AND (c.investment_ticker IS NOT NULL OR c.investment_shares IS NOT NULL);
+-- Investment metadata logging removed: cards table has no investment_* columns
 
 -- ──────────────────────────────────────────────────────────────
 -- 12. Backfill: initial balance adjustments
@@ -360,7 +347,7 @@ SELECT
   'system'::entry_source,
   'Ajuste automático de migración v2'
 FROM cards c
-WHERE c.card_type IN ('debit', 'cash', 'savings', 'voucher', 'investment')
+WHERE c.card_type::text IN ('debit', 'cash', 'savings', 'voucher', 'investment')
   AND COALESCE(c.balance, 0) <> 0;
 
 -- For credit cards: used_credit becomes negative adjustment
@@ -379,7 +366,7 @@ SELECT
   'system'::entry_source,
   'Crédito usado migrado como ajuste negativo'
 FROM cards c
-WHERE c.card_type = 'credit'
+WHERE c.card_type::text = 'credit'
   AND COALESCE(c.used_credit, 0) <> 0;
 
 -- ──────────────────────────────────────────────────────────────
