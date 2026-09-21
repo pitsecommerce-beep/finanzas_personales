@@ -1,7 +1,7 @@
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { todayMX } from '@/lib/utils/dates'
-import { v4 as uuidv4 } from 'uuid'
+import { randomUUID } from 'crypto'
 
 const EXPENSE_CATEGORIES = [
   'restaurante','transporte','despensa','entretenimiento','salud',
@@ -179,7 +179,7 @@ async function handleExpense(request: NextRequest, params: Record<string, unknow
     .single()
   if (catRow) categoryId = catRow.id
 
-  const idempotencyKey = `shortcuts-${tokenRow.user_id}-${date}-${amount}-${description.slice(0, 30)}-${uuidv4().slice(0, 8)}`
+  const idempotencyKey = `shortcuts-${tokenRow.user_id}-${date}-${amount}-${description.slice(0, 30)}-${randomUUID().slice(0, 8)}`
 
   const { error } = await supabase.from('ledger_entries').insert({
     user_id: tokenRow.user_id,
