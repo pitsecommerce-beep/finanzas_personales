@@ -186,3 +186,9 @@ export interface AccountBalance {
   movements_sum: number
   current_balance: number
 }
+
+// Legacy type aliases (old hooks still reference these)
+export type Card = Account
+export type Transaction = LedgerEntry
+export type FixedExpense = InstallmentPlan
+export type IncomeSource = RecurringRule
