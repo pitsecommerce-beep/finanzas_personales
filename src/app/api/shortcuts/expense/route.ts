@@ -1,6 +1,7 @@
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { todayMX } from '@/lib/utils/dates'
+import { v4 as uuidv4 } from 'uuid'
 
 const EXPENSE_CATEGORIES = [
   'restaurante','transporte','despensa','entretenimiento','salud',
@@ -102,12 +103,6 @@ function extractToken(request: NextRequest): string | null {
 
 async function handleExpense(request: NextRequest, params: Record<string, unknown>) {
   const startTime = Date.now()
-  const method = request.method
-
-  console.log('[Shortcuts] === Nueva petición ===')
-  console.log('[Shortcuts] Método:', method)
-  console.log('[Shortcuts] Content-Type:', request.headers.get('content-type') ?? '(vacío)')
-  console.log('[Shortcuts] User-Agent:', request.headers.get('user-agent') ?? '(vacío)')
 
   const supabase = getAdminClient()
   if (!supabase) {
@@ -116,11 +111,8 @@ async function handleExpense(request: NextRequest, params: Record<string, unknow
 
   const token = extractToken(request)
   if (!token) {
-    console.warn('[Shortcuts] Sin token. Authorization:', request.headers.get('authorization') ?? 'null')
     return respond({ error: 'Token requerido' }, 401)
   }
-
-  console.log('[Shortcuts] Token: ...', token.slice(-6))
 
   const { data: tokenRow, error: tokenError } = await supabase
     .from('shortcuts_tokens')
@@ -132,75 +124,75 @@ async function handleExpense(request: NextRequest, params: Record<string, unknow
     console.error('[Shortcuts] Error BD token:', tokenError.message)
   }
   if (!tokenRow || !tokenRow.is_active) {
-    return respond({ error: 'Token inválido o desactivado' }, 401)
+    return respond({ error: 'Token invalido o desactivado' }, 401)
   }
-
-  console.log('[Shortcuts] Token válido, user:', tokenRow.user_id)
-  console.log('[Shortcuts] Params recibidos:', JSON.stringify(params))
-  console.log('[Shortcuts] Tipos:', Object.fromEntries(
-    Object.entries(params).map(([k, v]) => [k, `${typeof v}: ${JSON.stringify(v)}`])
-  ))
 
   const amount = parseAmount(params.amount)
   const merchant = String(params.merchant || params.description || '').trim()
   const cardHint = String(params.card || '')
   const date = String(params.date || '') || todayMX()
 
-  console.log('[Shortcuts] Parseado:', { amount, merchant, cardHint, date })
-
   if (!amount || isNaN(amount) || amount <= 0) {
     return respond({
-      error: `Monto inválido. Recibido: ${JSON.stringify(params.amount)} (${typeof params.amount})`
+      error: `Monto invalido. Recibido: ${JSON.stringify(params.amount)} (${typeof params.amount})`
     }, 400)
   }
 
   const description = merchant || 'Gasto desde Shortcuts'
 
-  let cardId: string | null = null
-  let matchedCard: string | null = null
+  let accountId: string | null = null
+  let matchedAccount: string | null = null
 
   if (cardHint) {
-    const { data: cards } = await supabase
-      .from('cards')
-      .select('id, alias, last_four_digits, bank_name, card_type')
+    const { data: accounts } = await supabase
+      .from('accounts')
+      .select('id, alias, last_four, institution, account_type')
       .eq('user_id', tokenRow.user_id)
+      .eq('is_active', true)
 
-    if (cards?.length) {
+    if (accounts?.length) {
       const hint = cardHint.toLowerCase().trim()
       const digits = hint.replace(/\D/g, '').slice(-4)
 
-      const match = cards.find(c => {
-        if (digits.length === 4 && c.last_four_digits === digits) return true
-        const alias = (c.alias || '').toLowerCase()
-        const bank = (c.bank_name || '').toLowerCase()
-        return alias.includes(hint) || bank.includes(hint) || hint.includes(alias)
+      const match = accounts.find(a => {
+        if (digits.length === 4 && a.last_four === digits) return true
+        const alias = (a.alias || '').toLowerCase()
+        const inst = (a.institution || '').toLowerCase()
+        return alias.includes(hint) || inst.includes(hint) || hint.includes(alias)
       })
 
       if (match) {
-        cardId = match.id
-        matchedCard = match.alias
+        accountId = match.id
+        matchedAccount = match.alias
       }
     }
-    console.log('[Shortcuts] Tarjeta:', matchedCard ?? `no encontrada para "${cardHint}"`)
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY
-  const category = apiKey ? await categorize(description, apiKey) : 'otros'
+  const categorySlug = apiKey ? await categorize(description, apiKey) : 'otros'
 
-  const { error } = await supabase.from('transactions').insert({
+  let categoryId: string | null = null
+  const { data: catRow } = await supabase
+    .from('categories')
+    .select('id')
+    .eq('slug', categorySlug)
+    .single()
+  if (catRow) categoryId = catRow.id
+
+  const idempotencyKey = `shortcuts-${tokenRow.user_id}-${date}-${amount}-${description.slice(0, 30)}-${uuidv4().slice(0, 8)}`
+
+  const { error } = await supabase.from('ledger_entries').insert({
     user_id: tokenRow.user_id,
-    amount,
+    account_id: accountId,
+    entry_type: 'expense',
+    amount: -Math.abs(amount),
     description,
-    category,
-    type: 'expense',
-    card_id: cardId,
-    date,
-    is_recurring: false,
-    installment_months: null,
-    installment_current: null,
-    notes: 'Registrado desde Apple Shortcuts',
-    is_transfer: false,
+    category_id: categoryId,
+    occurred_on: date,
+    source: 'shortcuts',
     currency: 'MXN',
+    notes: 'Registrado desde Apple Shortcuts',
+    idempotency_key: idempotencyKey,
   })
 
   if (error) {
@@ -208,7 +200,7 @@ async function handleExpense(request: NextRequest, params: Record<string, unknow
   }
 
   const elapsed = Date.now() - startTime
-  const msg = `$${amount} - ${description} (${category})${matchedCard ? ` en ${matchedCard}` : ''}`
+  const msg = `$${amount} - ${description} (${categorySlug})${matchedAccount ? ` en ${matchedAccount}` : ''}`
   console.log('[Shortcuts] Guardado en', elapsed, 'ms:', msg)
 
   return respond({ ok: true, message: `Gasto registrado: ${msg}` }, 200)

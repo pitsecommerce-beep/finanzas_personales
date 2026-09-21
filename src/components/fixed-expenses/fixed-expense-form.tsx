@@ -5,37 +5,38 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CategoryPicker } from '@/components/transactions/category-picker'
 import { CardSelector } from '@/components/cards/card-selector'
-import { useCards } from '@/lib/hooks/use-cards'
-import { useFixedExpenses } from '@/lib/hooks/use-fixed-expenses'
+import { useAccounts } from '@/lib/data/accounts'
+import { useInstallmentPlans } from '@/lib/data/installments'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { useExchangeRate } from '@/lib/hooks/use-exchange-rate'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
 import { todayMX } from '@/lib/utils/dates'
-import type { FixedExpense } from '@/types/database'
+import type { InstallmentPlan } from '@/types/database'
 
 interface FixedExpenseFormProps {
-  expense?: FixedExpense
+  expense?: InstallmentPlan
   onSuccess?: () => void
 }
 
 export function FixedExpenseForm({ expense, onSuccess }: FixedExpenseFormProps) {
-  const [isMsi, setIsMsi] = useState(expense ? (expense.is_msi !== false && expense.total_months > 1) : true)
+  const isMsiDefault = expense ? expense.total_months > 1 : true
+  const [isMsi, setIsMsi] = useState(isMsiDefault)
   const [description, setDescription] = useState(expense?.description ?? '')
   const [totalAmount, setTotalAmount] = useState(expense?.total_amount?.toString() ?? '')
   const [totalMonths, setTotalMonths] = useState(expense?.total_months?.toString() ?? '')
   const [monthlyAmount, setMonthlyAmount] = useState(expense?.monthly_amount?.toString() ?? '')
-  const [cardId, setCardId] = useState<string | null>(expense?.card_id ?? null)
+  const [accountId, setAccountId] = useState<string | null>(expense?.account_id ?? null)
   const [startDate, setStartDate] = useState(expense?.start_date ?? todayMX())
   const [endDate, setEndDate] = useState(expense?.end_date ?? '')
-  const [category, setCategory] = useState(expense?.category ?? 'otros')
+  const [categorySlug, setCategorySlug] = useState(expense?.category?.slug ?? 'otros')
   const [currency, setCurrency] = useState<'MXN' | 'USD'>((expense?.currency as 'MXN' | 'USD') ?? 'MXN')
   const [loading, setLoading] = useState(false)
 
   const isEditing = !!expense
 
-  const { cards } = useCards()
-  const { addExpense, updateExpense } = useFixedExpenses()
+  const { accounts } = useAccounts()
+  const { addPlan, updatePlan } = useInstallmentPlans()
   const { rate: exchangeRate } = useExchangeRate()
   const { toast } = useToast()
 
@@ -68,14 +69,12 @@ export function FixedExpenseForm({ expense, onSuccess }: FixedExpenseFormProps) 
         total_amount: Math.round(finalTotal * 100) / 100,
         monthly_amount: Math.round(finalMonthly * 100) / 100,
         total_months: months,
-        card_id: cardId,
+        remaining_months: months,
+        account_id: accountId,
         start_date: startDate,
         end_date: null,
-        is_msi: true,
-        category,
-        status: 'active',
         currency,
-        exchange_rate: currency === 'USD' ? exchangeRate : null,
+        fx_rate: currency === 'USD' ? exchangeRate : null,
       }
     } else {
       const monthly = parseFloat(monthlyAmount)
@@ -85,28 +84,25 @@ export function FixedExpenseForm({ expense, onSuccess }: FixedExpenseFormProps) 
         total_amount: Math.round(finalMonthly * 100) / 100,
         monthly_amount: Math.round(finalMonthly * 100) / 100,
         total_months: 1,
-        card_id: cardId,
+        remaining_months: 1,
+        account_id: accountId,
         start_date: startDate,
         end_date: endDate || null,
-        is_msi: false,
-        category,
-        status: 'active',
         currency,
-        exchange_rate: currency === 'USD' ? exchangeRate : null,
+        fx_rate: currency === 'USD' ? exchangeRate : null,
       }
     }
 
     let result
     if (isEditing) {
-      result = await updateExpense(expense.id, data)
+      result = await updatePlan(expense.id, data)
     } else {
-      result = await addExpense(data)
+      result = await addPlan(data)
     }
     setLoading(false)
 
     if (result?.error) {
-      const msg = result.error.message || 'Error al guardar'
-      console.error('[Nummo] Error gasto fijo:', result.error)
+      const msg = typeof result.error === 'object' && 'message' in result.error ? (result.error as { message: string }).message : 'Error al guardar'
       toast(msg, 'error')
       return
     }
@@ -143,7 +139,7 @@ export function FixedExpenseForm({ expense, onSuccess }: FixedExpenseFormProps) 
 
       <Input
         id="description"
-        label="Descripción"
+        label="Descripcion"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder={isMsi ? 'Ej: Laptop, Refrigerador' : 'Ej: Renta, Spotify, Gym'}
@@ -257,7 +253,7 @@ export function FixedExpenseForm({ expense, onSuccess }: FixedExpenseFormProps) 
         </div>
       )}
 
-      <CardSelector cards={cards} value={cardId} onChange={setCardId} />
+      <CardSelector cards={accounts} value={accountId} onChange={setAccountId} />
 
       <div className="grid grid-cols-2 gap-3">
         <Input
@@ -278,7 +274,7 @@ export function FixedExpenseForm({ expense, onSuccess }: FixedExpenseFormProps) 
         )}
       </div>
 
-      <CategoryPicker type="expense" value={category} onChange={setCategory} />
+      <CategoryPicker type="expense" value={categorySlug} onChange={setCategorySlug} />
 
       <Button type="submit" loading={loading} className="w-full" size="lg">
         {isEditing ? 'Guardar cambios' : 'Registrar gasto fijo'}

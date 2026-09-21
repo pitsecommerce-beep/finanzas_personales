@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
-import { useFixedExpenses } from '@/lib/hooks/use-fixed-expenses'
+import { useInstallmentPlans } from '@/lib/data/installments'
 import { FixedExpenseList } from '@/components/fixed-expenses/fixed-expense-list'
 import { FixedExpenseForm } from '@/components/fixed-expenses/fixed-expense-form'
 import { Modal } from '@/components/ui/modal'
@@ -11,32 +11,32 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
 import { getRemainingMonths } from '@/lib/utils/dates'
-import type { FixedExpense } from '@/types/database'
+import type { InstallmentPlan } from '@/types/database'
 
 export default function GastosFijosPage() {
-  const { expenses, loading, deleteExpense, refetch } = useFixedExpenses()
+  const { plans, loading, deletePlan, refetch } = useInstallmentPlans()
   const [showForm, setShowForm] = useState(false)
-  const [editingExpense, setEditingExpense] = useState<FixedExpense | null>(null)
+  const [editingExpense, setEditingExpense] = useState<InstallmentPlan | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const { toast } = useToast()
 
-  const activeExpenses = expenses.filter((e) => e.status === 'active')
-  const totalMonthly = activeExpenses.reduce((sum, e) => {
-    const isMsi = e.is_msi !== false && e.total_months > 1
+  const activePlans = plans.filter((p) => p.is_active)
+  const totalMonthly = activePlans.reduce((sum, p) => {
+    const isMsi = p.total_months > 1
     if (isMsi) {
-      const remaining = getRemainingMonths(e.start_date, e.total_months)
-      return sum + (remaining > 0 ? Number(e.monthly_amount) : 0)
+      const remaining = getRemainingMonths(p.start_date, p.total_months)
+      return sum + (remaining > 0 ? Number(p.monthly_amount) : 0)
     }
     const now = new Date()
-    const start = new Date(e.start_date)
+    const start = new Date(p.start_date)
     if (start > now) return sum
-    if (e.end_date && new Date(e.end_date) < now) return sum
-    return sum + Number(e.monthly_amount)
+    if (p.end_date && new Date(p.end_date) < now) return sum
+    return sum + Number(p.monthly_amount)
   }, 0)
 
   async function confirmDelete() {
     if (!deleteId) return
-    const { error } = await deleteExpense(deleteId)
+    const { error } = await deletePlan(deleteId)
     if (error) toast('Error al eliminar', 'error')
     else toast('Gasto fijo eliminado', 'success')
     setDeleteId(null)
@@ -70,7 +70,7 @@ export default function GastosFijosPage() {
       )}
 
       <FixedExpenseList
-        expenses={expenses}
+        expenses={plans}
         onEdit={(exp) => setEditingExpense(exp)}
         onDelete={(id) => setDeleteId(id)}
       />
@@ -88,7 +88,7 @@ export default function GastosFijosPage() {
       <ConfirmDialog
         open={!!deleteId}
         title="Eliminar gasto fijo"
-        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
+        message="Esta accion no se puede deshacer. Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}

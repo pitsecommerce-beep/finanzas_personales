@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { Plus, Trash2, Pencil, CheckSquare, X } from 'lucide-react'
-import { useIncome } from '@/lib/hooks/use-income'
-import { useTransactions } from '@/lib/hooks/use-transactions'
+import { useRecurringRules } from '@/lib/data/recurring'
+import { useLedger } from '@/lib/data/ledger'
 import { TransactionList } from '@/components/transactions/transaction-list'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import { IncomeForm } from '@/components/income/income-form'
@@ -12,7 +12,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
-import type { IncomeSource, Transaction } from '@/types/database'
+import type { LedgerEntry, RecurringRule } from '@/types/database'
 
 const FREQ_LABELS: Record<string, string> = {
   weekly: 'Semanal',
@@ -20,22 +20,16 @@ const FREQ_LABELS: Record<string, string> = {
   monthly: 'Mensual',
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  salary: 'Salario',
-  freelance: 'Freelance',
-  business: 'Negocio',
-  investment: 'Inversión',
-  rental: 'Renta',
-  other: 'Otro',
-}
-
 export default function IngresosPage() {
-  const { sources, loading: sourcesLoading, deleteSource, refetch: refetchSources } = useIncome()
-  const { transactions, loading: txLoading, deleteTransaction, deleteTransactions, refetch: refetchTx } = useTransactions({ type: 'income' })
+  const { getIncomeRules, loading: rulesLoading, deleteRule, refetch: refetchRules } = useRecurringRules()
+  const { entries, loading: entriesLoading, softDeleteEntry, softDeleteEntries, refetch: refetchEntries } = useLedger()
+  const incomeEntries = entries.filter(e => e.entry_type === 'income')
+  const incomeRules = getIncomeRules()
+
   const [showIncomeForm, setShowIncomeForm] = useState(false)
-  const [editingSource, setEditingSource] = useState<IncomeSource | null>(null)
+  const [editingSource, setEditingSource] = useState<RecurringRule | null>(null)
   const [showTxForm, setShowTxForm] = useState(false)
-  const [editingTx, setEditingTx] = useState<Transaction | null>(null)
+  const [editingTx, setEditingTx] = useState<LedgerEntry | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; kind: 'source' | 'tx' } | null>(null)
   const [selectable, setSelectable] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -45,9 +39,9 @@ export default function IngresosPage() {
   async function confirmDelete() {
     if (!deleteTarget) return
     if (deleteTarget.kind === 'source') {
-      await deleteSource(deleteTarget.id)
+      await deleteRule(deleteTarget.id)
     } else {
-      await deleteTransaction(deleteTarget.id)
+      await softDeleteEntry(deleteTarget.id)
     }
     toast('Eliminado', 'success')
     setDeleteTarget(null)
@@ -55,7 +49,7 @@ export default function IngresosPage() {
 
   async function confirmBulkDelete() {
     const ids = Array.from(selectedIds)
-    const { error } = await deleteTransactions(ids)
+    const { error } = await softDeleteEntries(ids)
     if (error) toast('Error al eliminar', 'error')
     else toast(`${ids.length} ingresos eliminados`, 'success')
     setShowBulkDelete(false)
@@ -64,7 +58,7 @@ export default function IngresosPage() {
   }
 
   function selectAll() {
-    setSelectedIds(new Set(transactions.map(t => t.id)))
+    setSelectedIds(new Set(incomeEntries.map(e => e.id)))
   }
 
   function cancelSelection() {
@@ -72,7 +66,7 @@ export default function IngresosPage() {
     setSelectedIds(new Set())
   }
 
-  const loading = sourcesLoading || txLoading
+  const loading = rulesLoading || entriesLoading
 
   if (loading) {
     return (
@@ -89,7 +83,7 @@ export default function IngresosPage() {
         <div className="flex gap-2">
           {!selectable ? (
             <>
-              {transactions.length > 0 && (
+              {incomeEntries.length > 0 && (
                 <Button variant="outline" size="sm" onClick={() => setSelectable(true)}>
                   <CheckSquare size={14} /> Seleccionar
                 </Button>
@@ -104,7 +98,7 @@ export default function IngresosPage() {
           ) : (
             <>
               <Button variant="outline" size="sm" onClick={selectAll}>
-                Todos ({transactions.length})
+                Todos ({incomeEntries.length})
               </Button>
               <Button variant="outline" size="sm" onClick={cancelSelection}>
                 <X size={14} /> Cancelar
@@ -119,11 +113,11 @@ export default function IngresosPage() {
         </div>
       </div>
 
-      {sources.length > 0 && (
+      {incomeRules.length > 0 && (
         <div>
           <h2 className="font-semibold text-sm mb-3">Fuentes de ingreso</h2>
           <div className="grid sm:grid-cols-2 gap-3">
-            {sources.map((s) => (
+            {incomeRules.map((s) => (
               <div key={s.id} className="bg-white rounded-xl border border-border p-4 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-success/10 text-success flex items-center justify-center text-lg">
                   💼
@@ -131,8 +125,8 @@ export default function IngresosPage() {
                 <div className="flex-1">
                   <p className="font-medium text-sm">{s.description}</p>
                   <p className="text-xs text-muted">
-                    {TYPE_LABELS[s.income_type] ?? 'Otro'} · {FREQ_LABELS[s.frequency] ?? s.frequency}
-                    {s.card && ` · ${s.card.alias}`}
+                    {FREQ_LABELS[s.frequency] ?? s.frequency}
+                    {s.account && ` · ${s.account.alias}`}
                   </p>
                 </div>
                 <p className="font-semibold text-success text-sm">{formatMXN(s.amount)}</p>
@@ -157,8 +151,8 @@ export default function IngresosPage() {
       <div>
         <h2 className="font-semibold text-sm mb-3">Historial de ingresos</h2>
         <TransactionList
-          transactions={transactions}
-          onEdit={selectable ? undefined : (tx) => setEditingTx(tx)}
+          entries={incomeEntries}
+          onEdit={selectable ? undefined : (e) => setEditingTx(e)}
           onDelete={selectable ? undefined : (id) => setDeleteTarget({ id, kind: 'tx' })}
           selectable={selectable}
           selectedIds={selectedIds}
@@ -167,29 +161,29 @@ export default function IngresosPage() {
       </div>
 
       <Modal open={showIncomeForm} onClose={() => setShowIncomeForm(false)} title="Nueva fuente de ingreso">
-        <IncomeForm onSuccess={() => { setShowIncomeForm(false); refetchSources() }} />
+        <IncomeForm onSuccess={() => { setShowIncomeForm(false); refetchRules() }} />
       </Modal>
 
       <Modal open={!!editingSource} onClose={() => setEditingSource(null)} title="Editar fuente de ingreso">
         {editingSource && (
-          <IncomeForm source={editingSource} onSuccess={() => { setEditingSource(null); refetchSources() }} />
+          <IncomeForm source={editingSource} onSuccess={() => { setEditingSource(null); refetchRules() }} />
         )}
       </Modal>
 
       <Modal open={showTxForm} onClose={() => setShowTxForm(false)} title="Registrar ingreso">
-        <TransactionForm type="income" onSuccess={() => { setShowTxForm(false); refetchTx() }} />
+        <TransactionForm type="income" onSuccess={() => { setShowTxForm(false); refetchEntries() }} />
       </Modal>
 
       <Modal open={!!editingTx} onClose={() => setEditingTx(null)} title="Editar ingreso">
         {editingTx && (
-          <TransactionForm type="income" transaction={editingTx} onSuccess={() => { setEditingTx(null); refetchTx() }} />
+          <TransactionForm type="income" transaction={editingTx} onSuccess={() => { setEditingTx(null); refetchEntries() }} />
         )}
       </Modal>
 
       <ConfirmDialog
         open={!!deleteTarget}
         title="Eliminar registro"
-        message="Esta accion no se puede deshacer. ¿Deseas continuar?"
+        message="Esta accion no se puede deshacer. Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}

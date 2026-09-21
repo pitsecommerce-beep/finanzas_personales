@@ -6,21 +6,20 @@ import { SpendingChart } from '@/components/dashboard/spending-chart'
 import { SummaryCards } from '@/components/dashboard/summary-cards'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { formatMXN } from '@/lib/utils/currency'
-import { format, subMonths, startOfMonth } from 'date-fns'
+import { format, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
-import type { Transaction, Card } from '@/types/database'
+import type { LedgerEntry, AccountBalance } from '@/types/database'
 
 export default function ReportesPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [allTransactions, setAllTransactions] = useState<Transaction[]>([])
-  const [cards, setCards] = useState<Card[]>([])
+  const [entries, setEntries] = useState<LedgerEntry[]>([])
+  const [allEntries, setAllEntries] = useState<LedgerEntry[]>([])
+  const [balances, setBalances] = useState<AccountBalance[]>([])
   const [period, setPeriod] = useState('month')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
       if (!isSupabaseConfigured()) {
-        console.warn('[Nummo] Reportes: sin conexión a BD')
         setLoading(false)
         return
       }
@@ -38,23 +37,27 @@ export default function ReportesPage() {
           startDate = `${now.getFullYear()}-01-01`
         }
 
-        const [filtered, all, cardRes] = await Promise.all([
+        const [filtered, all, balRes] = await Promise.all([
           supabase
-            .from('transactions')
-            .select('*, card:cards!transactions_card_id_fkey(*)')
-            .gte('date', startDate)
-            .order('date', { ascending: false }),
+            .from('ledger_entries')
+            .select('*, account:accounts(*), category:categories(*)')
+            .gte('occurred_on', startDate)
+            .is('deleted_at', null)
+            .not('entry_type', 'eq', 'transfer')
+            .order('occurred_on', { ascending: false }),
           supabase
-            .from('transactions')
+            .from('ledger_entries')
             .select('*')
-            .gte('date', format(subMonths(now, 5), 'yyyy-MM-01'))
-            .order('date', { ascending: true }),
-          supabase.from('cards').select('*'),
+            .gte('occurred_on', format(subMonths(now, 5), 'yyyy-MM-01'))
+            .is('deleted_at', null)
+            .not('entry_type', 'eq', 'transfer')
+            .order('occurred_on', { ascending: true }),
+          supabase.from('v_account_balances').select('*'),
         ])
 
-        setTransactions(filtered.data ?? [])
-        setAllTransactions(all.data ?? [])
-        setCards(cardRes.data ?? [])
+        setEntries(filtered.data ?? [])
+        setAllEntries(all.data ?? [])
+        setBalances(balRes.data ?? [])
       } catch (err) {
         console.warn('[Nummo] Error al cargar reportes:', err)
       }
@@ -63,13 +66,13 @@ export default function ReportesPage() {
     load()
   }, [period])
 
-  const income = transactions
-    .filter((t) => t.type === 'income' && !t.is_transfer)
-    .reduce((sum, t) => sum + Number(t.amount), 0)
+  const income = entries
+    .filter((e) => e.entry_type === 'income')
+    .reduce((sum, e) => sum + Number(e.amount), 0)
 
-  const expenses = transactions
-    .filter((t) => t.type === 'expense' && !t.is_transfer)
-    .reduce((sum, t) => sum + Number(t.amount), 0)
+  const expenses = entries
+    .filter((e) => e.entry_type === 'expense')
+    .reduce((sum, e) => sum + Math.abs(Number(e.amount)), 0)
 
   const monthlyData = (() => {
     const months: Record<string, { month: string; ingresos: number; gastos: number }> = {}
@@ -82,12 +85,11 @@ export default function ReportesPage() {
         gastos: 0,
       }
     }
-    allTransactions.forEach((t) => {
-      if (t.is_transfer) return
-      const key = t.date.slice(0, 7)
+    allEntries.forEach((e) => {
+      const key = e.occurred_on.slice(0, 7)
       if (months[key]) {
-        if (t.type === 'income') months[key].ingresos += Number(t.amount)
-        else months[key].gastos += Number(t.amount)
+        if (e.entry_type === 'income') months[key].ingresos += Number(e.amount)
+        else if (e.entry_type === 'expense') months[key].gastos += Math.abs(Number(e.amount))
       }
     })
     return Object.values(months)
@@ -109,7 +111,7 @@ export default function ReportesPage() {
           {[
             { value: 'month', label: 'Mes' },
             { value: '3months', label: '3 meses' },
-            { value: 'year', label: 'Año' },
+            { value: 'year', label: 'Ano' },
           ].map((p) => (
             <button
               key={p.value}
@@ -124,9 +126,9 @@ export default function ReportesPage() {
         </div>
       </div>
 
-      <SummaryCards income={income} expenses={expenses} cards={cards} />
+      <SummaryCards income={income} expenses={expenses} balances={balances} />
 
-      <SpendingChart transactions={transactions} />
+      <SpendingChart entries={entries} />
 
       <div className="bg-white rounded-xl border border-border p-4">
         <h3 className="font-semibold text-sm mb-4">Ingresos vs Gastos (6 meses)</h3>
@@ -173,7 +175,7 @@ export default function ReportesPage() {
             </div>
             <div>
               <p className="text-sm text-muted">
-                Estás ahorrando {formatMXN(Math.max(0, income - expenses))} este periodo
+                Estas ahorrando {formatMXN(Math.max(0, income - expenses))} este periodo
               </p>
             </div>
           </div>

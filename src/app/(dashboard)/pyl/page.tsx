@@ -1,28 +1,22 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { formatMXN } from '@/lib/utils/currency'
 import { format, startOfMonth, endOfMonth, addMonths, addDays, isBefore, isAfter, isSameMonth } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { Transaction, FixedExpense, IncomeSource, Card, Account } from '@/types/database'
+import type { LedgerEntry, InstallmentPlan, RecurringRule, Account, AccountBalance, Debt } from '@/types/database'
 
 type Period = 'month' | 'semester' | 'year'
 
-function getMonthlyIncomeAmount(src: IncomeSource): number {
-  if (src.frequency === 'weekly') return src.amount * 4
-  if (src.frequency === 'biweekly') return src.amount * 2
-  return src.amount
-}
-
-function countOccurrencesInMonth(src: IncomeSource, monthDate: Date): number {
-  if (!src.next_payment_date) return 0
+function countOccurrencesInMonth(rule: RecurringRule, monthDate: Date): number {
+  if (!rule.next_occurrence) return 0
   const mStart = startOfMonth(monthDate)
   const mEnd = endOfMonth(monthDate)
-  const baseDate = new Date(src.next_payment_date + 'T12:00:00')
-  const stepDays = src.frequency === 'weekly' ? 7 : src.frequency === 'biweekly' ? 15 : 0
+  const baseDate = new Date(rule.next_occurrence + 'T12:00:00')
+  const stepDays = rule.frequency === 'weekly' ? 7 : rule.frequency === 'biweekly' ? 15 : 0
   const advance = stepDays > 0
     ? (d: Date, dir: number) => addDays(d, stepDays * dir)
     : (d: Date, dir: number) => addMonths(d, dir)
@@ -64,24 +58,25 @@ interface MonthData {
   totalIncome: number
   totalExpense: number
   net: number
-  cardProjections: { card: Card; projected: number }[]
+  accountProjections: { account: Account; balance: number; projected: number }[]
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
-  nomina: 'Nómina', freelance: 'Freelance', rendimientos: 'Rendimientos',
+  nomina: 'Nomina', freelance: 'Freelance', rendimientos: 'Rendimientos',
   renta: 'Renta', venta: 'Venta', regalo: 'Regalo', otros_ingresos: 'Otros ingresos',
   comida: 'Comida', transporte: 'Transporte', entretenimiento: 'Entretenimiento',
-  salud: 'Salud', educacion: 'Educación', ropa: 'Ropa', servicios: 'Servicios',
+  salud: 'Salud', educacion: 'Educacion', ropa: 'Ropa', servicios: 'Servicios',
   hogar: 'Hogar', mascotas: 'Mascotas', viajes: 'Viajes', suscripciones: 'Suscripciones',
   otros: 'Otros',
 }
 
 export default function PylPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([])
-  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([])
-  const [cards, setCards] = useState<Card[]>([])
+  const [entries, setEntries] = useState<LedgerEntry[]>([])
+  const [installments, setInstallments] = useState<InstallmentPlan[]>([])
+  const [incomeRules, setIncomeRules] = useState<RecurringRule[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [balances, setBalances] = useState<AccountBalance[]>([])
+  const [debts, setDebts] = useState<Debt[]>([])
   const [period, setPeriod] = useState<Period>('month')
   const [loading, setLoading] = useState(true)
 
@@ -94,22 +89,25 @@ export default function PylPage() {
         const rangeStart = months[0]
         const rangeEnd = endOfMonth(months[months.length - 1])
 
-        const [txRes, feRes, isRes, cRes, aRes] = await Promise.all([
-          supabase.from('transactions').select('*')
-            .gte('date', format(rangeStart, 'yyyy-MM-dd'))
-            .lte('date', format(rangeEnd, 'yyyy-MM-dd'))
-            .eq('is_transfer', false)
-            .order('date', { ascending: false }),
-          supabase.from('fixed_expenses').select('*').eq('status', 'active'),
-          supabase.from('income_sources').select('*'),
-          supabase.from('cards').select('*'),
-          supabase.from('accounts').select('*').eq('is_paid', false),
+        const [leRes, ipRes, rrRes, aRes, bRes, dRes] = await Promise.all([
+          supabase.from('ledger_entries').select('*, category:categories(*)')
+            .gte('occurred_on', format(rangeStart, 'yyyy-MM-dd'))
+            .lte('occurred_on', format(rangeEnd, 'yyyy-MM-dd'))
+            .is('deleted_at', null)
+            .not('entry_type', 'eq', 'transfer')
+            .order('occurred_on', { ascending: false }),
+          supabase.from('installment_plans').select('*').eq('is_active', true),
+          supabase.from('recurring_rules').select('*').eq('entry_type', 'income').eq('is_active', true),
+          supabase.from('accounts').select('*').eq('is_active', true),
+          supabase.from('v_account_balances').select('*'),
+          supabase.from('debts').select('*').eq('is_paid', false),
         ])
-        setTransactions(txRes.data ?? [])
-        setFixedExpenses(feRes.data ?? [])
-        setIncomeSources(isRes.data ?? [])
-        setCards(cRes.data ?? [])
+        setEntries(leRes.data ?? [])
+        setInstallments(ipRes.data ?? [])
+        setIncomeRules(rrRes.data ?? [])
         setAccounts(aRes.data ?? [])
+        setBalances(bRes.data ?? [])
+        setDebts(dRes.data ?? [])
       } catch (err) {
         console.warn('[Nummo] Error al cargar P&L:', err)
       }
@@ -122,110 +120,112 @@ export default function PylPage() {
   const isMultiMonth = months.length > 1
   const now = new Date()
 
+  const balanceMap = Object.fromEntries(balances.map(b => [b.account_id, b.current_balance]))
+
   function buildMonthData(monthDate: Date): MonthData {
     const mStart = startOfMonth(monthDate)
     const mEnd = endOfMonth(monthDate)
-    const isCurrent = isSameMonth(monthDate, now)
     const isFuture = isAfter(mStart, now)
 
-    const monthTx = transactions.filter(t => {
-      const d = new Date(t.date + 'T12:00:00')
+    const monthEntries = entries.filter(e => {
+      const d = new Date(e.occurred_on + 'T12:00:00')
       return !isBefore(d, mStart) && !isAfter(d, mEnd)
     })
 
-    const fixedIncome = incomeSources.map(src => {
-      const occ = countOccurrencesInMonth(src, monthDate)
-      return { description: src.description, amount: src.amount * occ }
+    const fixedIncome = incomeRules.map(rule => {
+      const occ = countOccurrencesInMonth(rule, monthDate)
+      return { description: rule.description, amount: rule.amount * occ }
     }).filter(r => r.amount > 0)
 
     const incomeByCategory: Record<string, number> = {}
-    monthTx.filter(t => t.type === 'income').forEach(t => {
-      const cat = t.category || 'otros'
-      incomeByCategory[cat] = (incomeByCategory[cat] || 0) + Number(t.amount)
+    monthEntries.filter(e => e.entry_type === 'income').forEach(e => {
+      const cat = e.category?.slug || 'otros'
+      incomeByCategory[cat] = (incomeByCategory[cat] || 0) + Number(e.amount)
     })
     const sporadicIncome = Object.entries(incomeByCategory).map(([cat, amount]) => ({
       category: CATEGORY_LABELS[cat] || cat, amount,
     })).sort((a, b) => b.amount - a.amount)
 
-    const receivables = accounts
-      .filter(a => a.type === 'receivable' && a.due_date)
-      .filter(a => {
-        const d = new Date(a.due_date! + 'T12:00:00')
-        return !isBefore(d, mStart) && !isAfter(d, mEnd)
+    const receivables = debts
+      .filter(d => d.type === 'receivable' && d.due_date)
+      .filter(d => {
+        const dd = new Date(d.due_date! + 'T12:00:00')
+        return !isBefore(dd, mStart) && !isAfter(dd, mEnd)
       })
-      .map(a => ({ person: a.person_name, amount: a.amount }))
+      .map(d => ({ person: d.person_name, amount: Number(d.amount) }))
 
-    const feList = fixedExpenses
-      .filter(fe => {
-        const feStart = startOfMonth(new Date(fe.start_date + 'T12:00:00'))
-        if (isAfter(feStart, mEnd)) return false
-        if (fe.is_msi && fe.total_months > 1) {
-          const feExpiry = endOfMonth(addMonths(feStart, fe.total_months - 1))
-          if (isBefore(feExpiry, mStart)) return false
+    const ipList = installments
+      .filter(ip => {
+        const ipStart = startOfMonth(new Date(ip.start_date + 'T12:00:00'))
+        if (isAfter(ipStart, mEnd)) return false
+        if (ip.total_months > 1) {
+          const ipExpiry = endOfMonth(addMonths(ipStart, ip.total_months - 1))
+          if (isBefore(ipExpiry, mStart)) return false
         }
-        if (!fe.is_msi && fe.end_date) {
-          const feEnd = new Date(fe.end_date + 'T12:00:00')
-          if (isBefore(feEnd, mStart)) return false
+        if (ip.total_months <= 1 && ip.end_date) {
+          const ipEnd = new Date(ip.end_date + 'T12:00:00')
+          if (isBefore(ipEnd, mStart)) return false
         }
         return true
       })
-      .map(fe => ({
-        description: fe.description, amount: Number(fe.monthly_amount),
+      .map(ip => ({
+        description: ip.description, amount: Number(ip.monthly_amount),
       }))
 
-    const sporadicExpenses = monthTx
-      .filter(t => t.type === 'expense')
-      .map(t => ({
-        description: t.description,
-        category: CATEGORY_LABELS[t.category] || t.category || 'Otros',
-        amount: Number(t.amount),
+    const sporadicExpenses = monthEntries
+      .filter(e => e.entry_type === 'expense')
+      .map(e => ({
+        description: e.description,
+        category: CATEGORY_LABELS[e.category?.slug ?? ''] || e.category?.slug || 'Otros',
+        amount: Math.abs(Number(e.amount)),
       }))
       .sort((a, b) => b.amount - a.amount)
 
-    const payables = accounts
-      .filter(a => a.type === 'payable' && a.due_date)
-      .filter(a => {
-        const d = new Date(a.due_date! + 'T12:00:00')
-        return !isBefore(d, mStart) && !isAfter(d, mEnd)
+    const payables = debts
+      .filter(d => d.type === 'payable' && d.due_date)
+      .filter(d => {
+        const dd = new Date(d.due_date! + 'T12:00:00')
+        return !isBefore(dd, mStart) && !isAfter(dd, mEnd)
       })
-      .map(a => ({ person: a.person_name, amount: a.amount }))
+      .map(d => ({ person: d.person_name, amount: Number(d.amount) }))
 
     const totalFixedIncome = fixedIncome.reduce((s, r) => s + r.amount, 0)
     const totalSporadicIncome = sporadicIncome.reduce((s, r) => s + r.amount, 0)
     const totalReceivables = receivables.reduce((s, r) => s + r.amount, 0)
     const totalIncome = totalFixedIncome + (isFuture ? 0 : totalSporadicIncome) + totalReceivables
 
-    const totalFixed = feList.reduce((s, r) => s + r.amount, 0)
+    const totalFixed = ipList.reduce((s, r) => s + r.amount, 0)
     const totalSporadicExp = sporadicExpenses.reduce((s, r) => s + r.amount, 0)
     const totalPayables = payables.reduce((s, r) => s + r.amount, 0)
     const totalExpense = totalFixed + (isFuture ? 0 : totalSporadicExp) + totalPayables
 
     const net = totalIncome - totalExpense
 
-    const cardProjections = cards
-      .filter(c => c.card_type !== 'credit')
-      .filter(c => c.balance != null)
-      .map(card => {
-        const cardFixedIncome = incomeSources
-          .filter(s => s.card_id === card.id)
-          .reduce((s, src) => s + src.amount * countOccurrencesInMonth(src, monthDate), 0)
+    const accountProjections = accounts
+      .filter(a => a.account_type !== 'credit_card')
+      .map(account => {
+        const currentBalance = balanceMap[account.id] ?? 0
 
-        const cardFixedExpense = fixedExpenses
-          .filter(fe => fe.card_id === card.id)
-          .reduce((s, fe) => s + Number(fe.monthly_amount), 0)
+        const acctFixedIncome = incomeRules
+          .filter(r => r.account_id === account.id)
+          .reduce((s, r) => s + r.amount * countOccurrencesInMonth(r, monthDate), 0)
 
-        const cardTxNet = monthTx
-          .filter(t => t.card_id === card.id)
-          .reduce((s, t) => t.type === 'income' ? s + Number(t.amount) : s - Number(t.amount), 0)
+        const acctFixedExpense = installments
+          .filter(ip => ip.account_id === account.id)
+          .reduce((s, ip) => s + Number(ip.monthly_amount), 0)
 
-        const projected = (card.balance ?? 0) + cardFixedIncome - cardFixedExpense + (isFuture ? 0 : cardTxNet)
-        return { card, projected }
+        const acctTxNet = monthEntries
+          .filter(e => e.account_id === account.id)
+          .reduce((s, e) => s + Number(e.amount), 0)
+
+        const projected = currentBalance + acctFixedIncome - acctFixedExpense + (isFuture ? 0 : acctTxNet)
+        return { account, balance: currentBalance, projected }
       })
 
     return {
       fixedIncome, sporadicIncome, receivables,
-      fixedExpenses: feList, sporadicExpenses, payables,
-      totalIncome, totalExpense, net, cardProjections,
+      fixedExpenses: ipList, sporadicExpenses, payables,
+      totalIncome, totalExpense, net, accountProjections,
     }
   }
 
@@ -294,7 +294,7 @@ export default function PylPage() {
             {([
               { value: 'month' as Period, label: 'Mes' },
               { value: 'semester' as Period, label: 'Semestre' },
-              { value: 'year' as Period, label: 'Año' },
+              { value: 'year' as Period, label: 'Ano' },
             ]).map((p) => (
               <button
                 key={p.value}
@@ -349,10 +349,10 @@ function SingleMonthView({ data }: { data: MonthData }) {
       </div>
 
       <Section title="Ingresos fijos" color="success" items={data.fixedIncome.map(r => ({ label: r.description, amount: r.amount }))} />
-      <Section title="Ingresos esporádicos" color="success" items={data.sporadicIncome.map(r => ({ label: r.category, amount: r.amount }))} emptyText="Sin ingresos esporádicos" />
+      <Section title="Ingresos esporadicos" color="success" items={data.sporadicIncome.map(r => ({ label: r.category, amount: r.amount }))} emptyText="Sin ingresos esporadicos" />
       <Section title="Cuentas por cobrar" color="success" items={data.receivables.map(r => ({ label: r.person, amount: r.amount }))} emptyText="Sin cuentas por cobrar" />
       <Section title="Gastos fijos" color="danger" items={data.fixedExpenses.map(r => ({ label: r.description, amount: r.amount }))} />
-      <Section title="Gastos esporádicos" color="danger" items={data.sporadicExpenses.map(r => ({ label: r.description, amount: r.amount }))} emptyText="Sin gastos esporádicos" />
+      <Section title="Gastos esporadicos" color="danger" items={data.sporadicExpenses.map(r => ({ label: r.description, amount: r.amount }))} emptyText="Sin gastos esporadicos" />
       <Section title="Cuentas por pagar" color="danger" items={data.payables.map(r => ({ label: r.person, amount: r.amount }))} emptyText="Sin cuentas por pagar" />
 
       <div className={`rounded-xl border p-4 ${net >= 0 ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}>
@@ -362,23 +362,23 @@ function SingleMonthView({ data }: { data: MonthData }) {
         </div>
       </div>
 
-      {data.cardProjections.length > 0 && (
+      {data.accountProjections.length > 0 && (
         <div className="bg-white rounded-xl border border-border overflow-hidden">
           <div className="bg-accent/5 px-4 py-3 border-b border-border">
-            <h3 className="font-semibold text-sm text-accent">Proyección por cuenta a fin de mes</h3>
+            <h3 className="font-semibold text-sm text-accent">Proyeccion por cuenta a fin de mes</h3>
           </div>
           <div className="divide-y divide-border">
-            {data.cardProjections.map(cp => (
-              <div key={cp.card.id} className="flex items-center justify-between px-4 py-3">
+            {data.accountProjections.map(ap => (
+              <div key={ap.account.id} className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cp.card.color }} />
-                  <span className="text-sm">{cp.card.alias}</span>
-                  <span className="text-xs text-muted">{cp.card.bank_name}</span>
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: ap.account.color }} />
+                  <span className="text-sm">{ap.account.alias}</span>
+                  <span className="text-xs text-muted">{ap.account.institution}</span>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-muted">Actual: {formatMXN(cp.card.balance ?? 0)}</p>
-                  <p className={`text-sm font-bold ${cp.projected >= 0 ? 'text-accent' : 'text-danger'}`}>
-                    Proyectado: {formatMXN(cp.projected)}
+                  <p className="text-xs text-muted">Actual: {formatMXN(ap.balance)}</p>
+                  <p className={`text-sm font-bold ${ap.projected >= 0 ? 'text-accent' : 'text-danger'}`}>
+                    Proyectado: {formatMXN(ap.projected)}
                   </p>
                 </div>
               </div>
@@ -432,8 +432,8 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
   const sporadicExpenseCategories = [...new Set(monthsData.flatMap(md => md.data.sporadicExpenses.map(r => r.category)))]
   const allReceivables = [...new Set(monthsData.flatMap(md => md.data.receivables.map(r => r.person)))]
   const allPayables = [...new Set(monthsData.flatMap(md => md.data.payables.map(r => r.person)))]
-  const allCards = [...new Set(monthsData.flatMap(md => md.data.cardProjections.map(cp => cp.card.id)))]
-  const cardMap = Object.fromEntries(monthsData.flatMap(md => md.data.cardProjections.map(cp => [cp.card.id, cp.card])))
+  const allAccounts = [...new Set(monthsData.flatMap(md => md.data.accountProjections.map(ap => ap.account.id)))]
+  const accountMap = Object.fromEntries(monthsData.flatMap(md => md.data.accountProjections.map(ap => [ap.account.id, ap.account])))
 
   const now = new Date()
 
@@ -465,7 +465,7 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
 
           {allSporadicIncome.length > 0 && (
             <>
-              <GroupHeader label="Ingresos esporádicos" color="success" colSpan={monthsData.length + 1} />
+              <GroupHeader label="Ingresos esporadicos" color="success" colSpan={monthsData.length + 1} />
               {allSporadicIncome.map(cat => (
                 <DataRow key={cat} label={cat} values={monthsData.map(md =>
                   md.data.sporadicIncome.find(r => r.category === cat)?.amount ?? 0
@@ -505,7 +505,7 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
 
           {sporadicExpenseCategories.length > 0 && (
             <>
-              <GroupHeader label="Gastos esporádicos" color="danger" colSpan={monthsData.length + 1} />
+              <GroupHeader label="Gastos esporadicos" color="danger" colSpan={monthsData.length + 1} />
               {sporadicExpenseCategories.map(cat => (
                 <DataRow key={cat} label={cat} values={monthsData.map(md =>
                   md.data.sporadicExpenses.filter(r => r.category === cat).reduce((s, r) => s + r.amount, 0)
@@ -542,22 +542,22 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
             ))}
           </tr>
 
-          {allCards.length > 0 && (
+          {allAccounts.length > 0 && (
             <>
-              <GroupHeader label="Proyección por cuenta" color="accent" colSpan={monthsData.length + 1} />
-              {allCards.map(cardId => {
-                const card = cardMap[cardId]
+              <GroupHeader label="Proyeccion por cuenta" color="accent" colSpan={monthsData.length + 1} />
+              {allAccounts.map(accountId => {
+                const account = accountMap[accountId]
                 return (
-                  <tr key={cardId} className="border-t border-border">
+                  <tr key={accountId} className="border-t border-border">
                     <td className="px-4 py-2 sticky left-0 bg-white">
                       <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: card.color }} />
-                        <span className="text-sm truncate">{card.alias}</span>
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: account.color }} />
+                        <span className="text-sm truncate">{account.alias}</span>
                       </div>
                     </td>
                     {monthsData.map((md, i) => {
-                      const cp = md.data.cardProjections.find(c => c.card.id === cardId)
-                      const val = cp?.projected ?? 0
+                      const ap = md.data.accountProjections.find(a => a.account.id === accountId)
+                      const val = ap?.projected ?? 0
                       return (
                         <td key={i} className={`text-right px-4 py-2 text-sm font-medium ${val >= 0 ? 'text-accent' : 'text-danger'}`}>
                           {fmtShort(val)}

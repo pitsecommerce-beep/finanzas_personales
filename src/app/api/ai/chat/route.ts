@@ -15,14 +15,18 @@ export async function POST(request: NextRequest) {
 
   const { messages } = await request.json()
 
-  let configRes, txRes, cardsRes, fixedRes, incomeRes
+  let configRes, leRes, acctRes, ipRes, rrRes
   try {
-    ;[configRes, txRes, cardsRes, fixedRes, incomeRes] = await Promise.all([
+    ;[configRes, leRes, acctRes, ipRes, rrRes] = await Promise.all([
       supabase.from('ai_config').select('*').eq('user_id', user.id).single(),
-      supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(100),
-      supabase.from('cards').select('*').eq('user_id', user.id),
-      supabase.from('fixed_expenses').select('*').eq('user_id', user.id).eq('status', 'active'),
-      supabase.from('income_sources').select('*').eq('user_id', user.id),
+      supabase.from('ledger_entries').select('*, category:categories(slug)')
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .not('entry_type', 'eq', 'transfer')
+        .order('occurred_on', { ascending: false }).limit(100),
+      supabase.from('accounts').select('*').eq('user_id', user.id).eq('is_active', true),
+      supabase.from('installment_plans').select('*').eq('user_id', user.id).eq('is_active', true),
+      supabase.from('recurring_rules').select('*').eq('user_id', user.id).eq('is_active', true),
     ])
   } catch (err) {
     console.warn('[Nummo] Error al cargar datos para IA:', err)
@@ -30,26 +34,27 @@ export async function POST(request: NextRequest) {
   }
 
   const systemPrompt = configRes.data?.system_prompt ??
-    'Eres un asesor financiero personal. Tienes acceso a los datos financieros del usuario. Ofrece consejos prácticos, identifica patrones de gasto, y sugiere formas de ahorrar. Responde siempre en español y de forma amigable.'
+    'Eres un asesor financiero personal. Tienes acceso a los datos financieros del usuario. Ofrece consejos practicos, identifica patrones de gasto, y sugiere formas de ahorrar. Responde siempre en espanol y de forma amigable.'
 
-  const transactions = txRes.data ?? []
-  const cards = cardsRes.data ?? []
-  const fixedExpenses = fixedRes.data ?? []
-  const incomeSources = incomeRes.data ?? []
+  const entries = leRes.data ?? []
+  const accounts = acctRes.data ?? []
+  const installments = ipRes.data ?? []
+  const incomeRules = rrRes.data ?? []
 
   const now = new Date()
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  const monthlyExpenses = transactions
-    .filter((t: any) => t.type === 'expense' && t.date.startsWith(thisMonth))
-    .reduce((sum: number, t: any) => sum + Number(t.amount), 0)
-  const monthlyIncome = transactions
-    .filter((t: any) => t.type === 'income' && t.date.startsWith(thisMonth))
-    .reduce((sum: number, t: any) => sum + Number(t.amount), 0)
+  const monthlyExpenses = entries
+    .filter((e: any) => e.entry_type === 'expense' && e.occurred_on.startsWith(thisMonth))
+    .reduce((sum: number, e: any) => sum + Math.abs(Number(e.amount)), 0)
+  const monthlyIncome = entries
+    .filter((e: any) => e.entry_type === 'income' && e.occurred_on.startsWith(thisMonth))
+    .reduce((sum: number, e: any) => sum + Number(e.amount), 0)
 
-  const categoryBreakdown = transactions
-    .filter((t: any) => t.type === 'expense' && t.date.startsWith(thisMonth))
-    .reduce<Record<string, number>>((acc, t: any) => {
-      acc[t.category] = (acc[t.category] ?? 0) + Number(t.amount)
+  const categoryBreakdown = entries
+    .filter((e: any) => e.entry_type === 'expense' && e.occurred_on.startsWith(thisMonth))
+    .reduce<Record<string, number>>((acc, e: any) => {
+      const cat = e.category?.slug ?? 'otros'
+      acc[cat] = (acc[cat] ?? 0) + Math.abs(Number(e.amount))
       return acc
     }, {})
 
@@ -58,10 +63,10 @@ DATOS FINANCIEROS DEL USUARIO:
 - Gastos este mes: $${monthlyExpenses.toFixed(2)} MXN
 - Ingresos este mes: $${monthlyIncome.toFixed(2)} MXN
 - Balance: $${(monthlyIncome - monthlyExpenses).toFixed(2)} MXN
-- Tarjetas: ${cards.length} (${cards.map((c: any) => `${c.alias} - ${c.bank_name} (${c.card_type})`).join(', ')})
-- Gastos fijos activos: ${fixedExpenses.length} (total mensual: $${fixedExpenses.reduce((s: number, e: any) => s + Number(e.monthly_amount), 0).toFixed(2)})
-- Fuentes de ingreso: ${incomeSources.map((i: any) => `${i.description}: $${i.amount} (${i.frequency})`).join(', ') || 'Ninguna registrada'}
-- Desglose por categoría este mes: ${Object.entries(categoryBreakdown).map(([cat, amt]) => `${cat}: $${(amt as number).toFixed(2)}`).join(', ') || 'Sin datos'}
+- Cuentas: ${accounts.length} (${accounts.map((a: any) => `${a.alias} - ${a.institution ?? ''} (${a.account_type})`).join(', ')})
+- Gastos fijos activos: ${installments.length} (total mensual: $${installments.reduce((s: number, ip: any) => s + Number(ip.monthly_amount), 0).toFixed(2)})
+- Fuentes de ingreso: ${incomeRules.filter((r: any) => r.entry_type === 'income').map((r: any) => `${r.description}: $${r.amount} (${r.frequency})`).join(', ') || 'Ninguna registrada'}
+- Desglose por categoria este mes: ${Object.entries(categoryBreakdown).map(([cat, amt]) => `${cat}: $${(amt as number).toFixed(2)}`).join(', ') || 'Sin datos'}
 `
 
   const apiKey = process.env.ANTHROPIC_API_KEY

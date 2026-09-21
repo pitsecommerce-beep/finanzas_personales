@@ -4,16 +4,14 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CurrencyInput } from '@/components/ui/currency-input'
-import { Select } from '@/components/ui/select'
 import { CardSelector } from '@/components/cards/card-selector'
-import { useCards } from '@/lib/hooks/use-cards'
-import { useIncome } from '@/lib/hooks/use-income'
+import { useAccounts } from '@/lib/data/accounts'
+import { useRecurringRules } from '@/lib/data/recurring'
 import { useToast } from '@/components/ui/toast'
-import { INCOME_TYPES } from '@/lib/constants/categories'
-import type { FrequencyType, IncomeType } from '@/types/database'
+import type { FrequencyType, RecurringRule } from '@/types/database'
 
 interface IncomeFormProps {
-  source?: { id: string; description: string; amount: number; frequency: FrequencyType; income_type?: IncomeType; card_id?: string | null; next_payment_date?: string | null }
+  source?: RecurringRule
   onSuccess?: () => void
 }
 
@@ -21,13 +19,12 @@ export function IncomeForm({ source, onSuccess }: IncomeFormProps) {
   const [description, setDescription] = useState(source?.description ?? '')
   const [amount, setAmount] = useState(source?.amount?.toString() ?? '')
   const [frequency, setFrequency] = useState<FrequencyType>(source?.frequency ?? 'monthly')
-  const [incomeType, setIncomeType] = useState<IncomeType>((source?.income_type as IncomeType) ?? 'other')
-  const [cardId, setCardId] = useState<string | null>(source?.card_id ?? null)
-  const [nextDate, setNextDate] = useState(source?.next_payment_date ?? '')
+  const [accountId, setAccountId] = useState<string | null>(source?.account_id ?? null)
+  const [nextDate, setNextDate] = useState(source?.next_occurrence ?? '')
   const [loading, setLoading] = useState(false)
 
-  const { cards } = useCards()
-  const { addSource, updateSource } = useIncome()
+  const { accounts } = useAccounts()
+  const { addRule, updateRule } = useRecurringRules()
   const { toast } = useToast()
 
   const isEditing = !!source
@@ -36,20 +33,20 @@ export function IncomeForm({ source, onSuccess }: IncomeFormProps) {
     e.preventDefault()
     setLoading(true)
 
-    const data = {
+    const data: Record<string, unknown> = {
       description,
       amount: parseFloat(amount),
       frequency,
-      income_type: incomeType,
-      card_id: cardId,
-      next_payment_date: nextDate || null,
+      entry_type: 'income',
+      account_id: accountId,
+      next_occurrence: nextDate || null,
     }
 
     let result
     if (isEditing) {
-      result = await updateSource(source.id, data)
+      result = await updateRule(source.id, data)
     } else {
-      result = await addSource(data)
+      result = await addRule(data)
     }
 
     setLoading(false)
@@ -73,19 +70,11 @@ export function IncomeForm({ source, onSuccess }: IncomeFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <Input
         id="description"
-        label="Descripción"
+        label="Descripcion"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="Ej: Nómina, Freelance"
+        placeholder="Ej: Nomina, Freelance"
         required
-      />
-
-      <Select
-        id="incomeType"
-        label="Tipo de ingreso"
-        value={incomeType}
-        onChange={(e) => setIncomeType(e.target.value as IncomeType)}
-        options={INCOME_TYPES.map(t => ({ value: t.value, label: t.label }))}
       />
 
       <CurrencyInput
@@ -119,16 +108,16 @@ export function IncomeForm({ source, onSuccess }: IncomeFormProps) {
       </div>
 
       <CardSelector
-        cards={cards}
-        value={cardId}
-        onChange={setCardId}
+        cards={accounts}
+        value={accountId}
+        onChange={setAccountId}
         label="Cuenta destino"
         filterTypes={['debit', 'savings', 'cash', 'voucher']}
       />
 
       <Input
         id="nextDate"
-        label="Próximo pago"
+        label="Proximo pago"
         type="date"
         value={nextDate}
         onChange={(e) => setNextDate(e.target.value)}

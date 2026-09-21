@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { Plus, Trash2, Pencil, PiggyBank } from 'lucide-react'
-import { useSavings } from '@/lib/hooks/use-savings'
-import { useCards } from '@/lib/hooks/use-cards'
+import { useSavings } from '@/lib/data/savings'
+import { useAccounts } from '@/lib/data/accounts'
 import { Modal } from '@/components/ui/modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Button } from '@/components/ui/button'
@@ -18,8 +18,8 @@ import { es } from 'date-fns/locale'
 import type { SavingsGoal } from '@/types/database'
 
 export default function AhorroPage() {
-  const { goals, loading, addGoal, updateGoal, deleteGoal, refetch } = useSavings()
-  const { cards } = useCards()
+  const { accounts } = useAccounts()
+  const { goals, loading, addGoal, updateGoal, deleteGoal, refetch } = useSavings(accounts)
   const [showForm, setShowForm] = useState(false)
   const [editingGoal, setEditingGoal] = useState<SavingsGoal | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -129,7 +129,7 @@ export default function AhorroPage() {
       {goals.length === 0 ? (
         <div className="text-center py-16 text-muted">
           <PiggyBank size={48} className="mx-auto mb-3 text-accent/40" />
-          <p className="text-sm mb-4">Configura cuánto ahorrarás cada mes y hacia dónde va ese dinero</p>
+          <p className="text-sm mb-4">Configura cuanto ahorraras cada mes y hacia donde va ese dinero</p>
           <Button onClick={openCreate}>Crear meta</Button>
         </div>
       ) : (
@@ -181,7 +181,7 @@ export default function AhorroPage() {
       )}
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800">
-        El dinero asignado a metas de ahorro permanece en tu cuenta pero se considera no disponible para gastos. Si un gasto consume ese dinero, recibirás una alerta.
+        El dinero asignado a metas de ahorro permanece en tu cuenta pero se considera no disponible para gastos. Si un gasto consume ese dinero, recibiras una alerta.
       </div>
 
       <Modal open={showForm || !!editingGoal} onClose={closeForm} title={editingGoal ? 'Editar meta de ahorro' : 'Nueva meta de ahorro'}>
@@ -226,13 +226,13 @@ export default function AhorroPage() {
             />
           </div>
           <CardSelector
-            cards={cards}
+            cards={accounts}
             value={sourceCardId}
             onChange={setSourceCardId}
             label="Cuenta origen *"
           />
           <CardSelector
-            cards={cards.filter(c => c.id !== sourceCardId)}
+            cards={accounts.filter(c => c.id !== sourceCardId)}
             value={cardId}
             onChange={setCardId}
             label="Cuenta destino (opcional)"
@@ -240,12 +240,12 @@ export default function AhorroPage() {
           />
           {cardId && (
             <div className="bg-accent/10 border border-accent/20 rounded-lg px-3 py-2 text-xs text-accent">
-              Se programará un traspaso automático de la cuenta origen a la cuenta destino en las fechas configuradas.
+              Se programara un traspaso automatico de la cuenta origen a la cuenta destino en las fechas configuradas.
             </div>
           )}
           {!cardId && sourceCardId && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-700">
-              El dinero se apartará dentro de la cuenta origen. Si gastas de ese apartado, recibirás una alerta.
+              El dinero se apartara dentro de la cuenta origen. Si gastas de ese apartado, recibiras una alerta.
             </div>
           )}
           <Button type="submit" className="w-full" size="lg">
@@ -257,7 +257,7 @@ export default function AhorroPage() {
       <ConfirmDialog
         open={!!deleteId}
         title="Eliminar meta"
-        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
+        message="Esta accion no se puede deshacer. Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}

@@ -1,7 +1,7 @@
 'use client'
 
-import type { FixedExpense } from '@/types/database'
-import { getCategoryEmoji } from '@/lib/constants/categories'
+import type { InstallmentPlan } from '@/types/database'
+import { useCategories } from '@/lib/data/categories'
 import { formatMXN } from '@/lib/utils/currency'
 import { getRemainingMonths } from '@/lib/utils/dates'
 import { Trash2, Pencil } from 'lucide-react'
@@ -9,12 +9,14 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 interface FixedExpenseListProps {
-  expenses: FixedExpense[]
-  onEdit?: (expense: FixedExpense) => void
+  expenses: InstallmentPlan[]
+  onEdit?: (expense: InstallmentPlan) => void
   onDelete?: (id: string) => void
 }
 
 export function FixedExpenseList({ expenses, onEdit, onDelete }: FixedExpenseListProps) {
+  const { getEmoji } = useCategories()
+
   if (expenses.length === 0) {
     return (
       <div className="text-center py-12 text-muted">
@@ -27,15 +29,16 @@ export function FixedExpenseList({ expenses, onEdit, onDelete }: FixedExpenseLis
   return (
     <div className="space-y-3">
       {expenses.map((exp) => {
-        const isMsi = exp.is_msi !== false && exp.total_months > 1
+        const isMsi = exp.total_months > 1
         const remaining = isMsi ? getRemainingMonths(exp.start_date, exp.total_months) : 0
         const paid = isMsi ? exp.total_months - remaining : 0
         const progress = isMsi ? (paid / exp.total_months) * 100 : 0
+        const emoji = exp.category?.slug ? getEmoji(exp.category.slug) : '📦'
 
         return (
           <div key={exp.id} className="bg-white rounded-xl border border-border p-4">
             <div className="flex items-start gap-3">
-              <span className="text-xl">{getCategoryEmoji(exp.category)}</span>
+              <span className="text-xl">{emoji}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -47,7 +50,7 @@ export function FixedExpenseList({ expenses, onEdit, onDelete }: FixedExpenseLis
                     </span>
                     {exp.currency === 'USD' && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">
-                        USD · TC ${exp.exchange_rate?.toFixed(2)}
+                        USD · TC ${exp.fx_rate?.toFixed(2)}
                       </span>
                     )}
                   </div>
@@ -74,8 +77,8 @@ export function FixedExpenseList({ expenses, onEdit, onDelete }: FixedExpenseLis
                   <span>Mensualidad: {formatMXN(exp.monthly_amount)}</span>
                   {isMsi && <span>Total: {formatMXN(exp.total_amount)}</span>}
                 </div>
-                {exp.card && (
-                  <p className="text-xs text-muted mt-0.5">{exp.card.alias}</p>
+                {exp.account && (
+                  <p className="text-xs text-muted mt-0.5">{exp.account.alias}</p>
                 )}
 
                 {!isMsi && (

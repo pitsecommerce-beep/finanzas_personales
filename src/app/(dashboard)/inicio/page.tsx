@@ -1,62 +1,30 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { useProfileContext } from '@/lib/context/profile-context'
-import { useYields } from '@/lib/hooks/use-yields'
+import { useAccounts, useAccountBalances } from '@/lib/data/accounts'
+import { useLedger } from '@/lib/data/ledger'
 import { QuickEntry } from '@/components/dashboard/quick-entry'
 import { VoiceEntry } from '@/components/dashboard/voice-entry'
 import { SummaryCards } from '@/components/dashboard/summary-cards'
 import { SpendingChart } from '@/components/dashboard/spending-chart'
 import { UpcomingPayments } from '@/components/dashboard/upcoming-payments'
 import { TransactionList } from '@/components/transactions/transaction-list'
-import type { Transaction, Card } from '@/types/database'
 
 export default function InicioPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [cards, setCards] = useState<Card[]>([])
-  const [loading, setLoading] = useState(true)
+  const { accounts, loading: accountsLoading } = useAccounts()
+  const { balances, loading: balancesLoading } = useAccountBalances()
+  const { entries, loading: entriesLoading } = useLedger()
   const { firstName } = useProfileContext()
-  useYields()
 
-  useEffect(() => {
-    async function load() {
-      if (!isSupabaseConfigured()) {
-        console.warn('[Nummo] Inicio: sin conexión a BD')
-        setLoading(false)
-        return
-      }
-      try {
-        const supabase = createClient()
-        const now = new Date()
-        const startOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  const loading = accountsLoading || balancesLoading || entriesLoading
 
-        const [txRes, cardRes] = await Promise.all([
-          supabase
-            .from('transactions')
-            .select('*, card:cards!transactions_card_id_fkey(*), transfer_from_card:cards!transfer_from_card_id(id, alias, bank_name, card_type), transfer_to_card:cards!transfer_to_card_id(id, alias, bank_name, card_type)')
-            .gte('date', startOfMonth)
-            .order('date', { ascending: false }),
-          supabase.from('cards').select('*').order('created_at', { ascending: false }),
-        ])
+  const income = entries
+    .filter((e) => e.entry_type === 'income')
+    .reduce((sum, e) => sum + Number(e.amount), 0)
 
-        setTransactions(txRes.data ?? [])
-        setCards(cardRes.data ?? [])
-      } catch (err) {
-        console.warn('[Nummo] Error al cargar datos de inicio:', err)
-      }
-      setLoading(false)
-    }
-    load()
-  }, [])
-
-  const income = transactions
-    .filter((t) => t.type === 'income' && !t.is_transfer)
-    .reduce((sum, t) => sum + Number(t.amount), 0)
-
-  const expenses = transactions
-    .filter((t) => t.type === 'expense' && !t.is_transfer)
-    .reduce((sum, t) => sum + Number(t.amount), 0)
+  const expenses = entries
+    .filter((e) => e.entry_type === 'expense')
+    .reduce((sum, e) => sum + Math.abs(Number(e.amount)), 0)
 
   if (loading) {
     return (
@@ -79,16 +47,16 @@ export default function InicioPage() {
 
       <VoiceEntry />
 
-      <SummaryCards income={income} expenses={expenses} cards={cards} />
+      <SummaryCards income={income} expenses={expenses} balances={balances} />
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <SpendingChart transactions={transactions} />
-        <UpcomingPayments cards={cards} />
+        <SpendingChart entries={entries} />
+        <UpcomingPayments accounts={accounts} />
       </div>
 
       <div>
-        <h2 className="font-semibold text-sm mb-3">Últimos movimientos</h2>
-        <TransactionList transactions={transactions.slice(0, 10)} />
+        <h2 className="font-semibold text-sm mb-3">Ultimos movimientos</h2>
+        <TransactionList entries={entries.slice(0, 10)} />
       </div>
     </div>
   )
