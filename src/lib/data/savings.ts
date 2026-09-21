@@ -10,8 +10,7 @@ export function useSavings(accounts: Account[] = []) {
 
   const accountMap = Object.fromEntries(accounts.map(a => [a.id, a]))
 
-  function enrich(goal: Record<string, unknown>): SavingsGoal {
-    const g = goal as SavingsGoal
+  function enrich(g: SavingsGoal): SavingsGoal {
     return {
       ...g,
       source_card: g.source_card_id ? accountMap[g.source_card_id] : undefined,
