@@ -3,19 +3,19 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
-import { useCards } from '@/lib/hooks/use-cards'
+import { useAccounts, useAccountBalances } from '@/lib/data/accounts'
 import { CardItem } from '@/components/cards/card-item'
 import { CardForm } from '@/components/cards/card-form'
 import { Modal } from '@/components/ui/modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
-import type { Card } from '@/types/database'
+import type { Account, AccountType } from '@/types/database'
 
-const TYPE_ORDER = ['credit', 'debit', 'cash', 'savings', 'voucher', 'investment'] as const
+const TYPE_ORDER: AccountType[] = ['credit_card', 'debit', 'cash', 'savings', 'voucher', 'investment']
 
 const TYPE_LABELS: Record<string, string> = {
-  credit: 'Tarjetas de credito',
+  credit_card: 'Tarjetas de credito',
   debit: 'Tarjetas de debito',
   cash: 'Efectivo',
   savings: 'Cuentas de ahorro',
@@ -25,13 +25,14 @@ const TYPE_LABELS: Record<string, string> = {
 
 export default function TarjetasPage() {
   const router = useRouter()
-  const { cards, loading, deleteCard, refetch } = useCards()
+  const { accounts, loading, deleteAccount, refetch } = useAccounts()
+  const { balances } = useAccountBalances()
   const [showForm, setShowForm] = useState(false)
-  const [editingCard, setEditingCard] = useState<Card | null>(null)
+  const [editingCard, setEditingCard] = useState<Account | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const { toast } = useToast()
 
-  function handleEdit(card: Card) {
+  function handleEdit(card: Account) {
     setEditingCard(card)
   }
 
@@ -42,9 +43,9 @@ export default function TarjetasPage() {
 
   async function confirmDelete() {
     if (!deleteId) return
-    const { error } = await deleteCard(deleteId)
+    const { error } = await deleteAccount(deleteId)
     if (error) toast('Error al eliminar', 'error')
-    else toast('Tarjeta eliminada', 'success')
+    else toast('Cuenta eliminada', 'success')
     setDeleteId(null)
   }
 
@@ -56,11 +57,11 @@ export default function TarjetasPage() {
     )
   }
 
-  const grouped: Record<string, Card[]> = {}
-  for (const card of cards) {
-    const type = card.card_type
+  const grouped: Record<string, Account[]> = {}
+  for (const account of accounts) {
+    const type = account.account_type
     if (!grouped[type]) grouped[type] = []
-    grouped[type].push(card)
+    grouped[type].push(account)
   }
 
   const orderedTypes = TYPE_ORDER.filter(t => grouped[t]?.length)
@@ -70,14 +71,14 @@ export default function TarjetasPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Tarjetas y cuentas</h1>
-          <p className="text-sm text-muted">{cards.length} registros</p>
+          <p className="text-sm text-muted">{accounts.length} registros</p>
         </div>
         <Button onClick={() => setShowForm(true)} size="sm">
           <Plus size={16} /> Agregar
         </Button>
       </div>
 
-      {cards.length === 0 ? (
+      {accounts.length === 0 ? (
         <div className="text-center py-16 text-muted">
           <p className="text-4xl mb-3">💳</p>
           <p className="text-sm mb-4">Agrega tu primera tarjeta o registro de efectivo</p>
@@ -89,10 +90,11 @@ export default function TarjetasPage() {
             <div key={type}>
               <h2 className="font-semibold text-sm text-muted mb-3">{TYPE_LABELS[type] ?? type}</h2>
               <div className="grid sm:grid-cols-2 gap-4">
-                {grouped[type].map((card) => (
+                {grouped[type].map((account) => (
                   <CardItem
-                    key={card.id}
-                    card={card}
+                    key={account.id}
+                    card={account}
+                    balance={balances.find(b => b.account_id === account.id)}
                     onView={(c) => router.push(`/tarjetas/${c.id}`)}
                     onEdit={handleEdit}
                     onDelete={(id) => setDeleteId(id)}
@@ -104,11 +106,11 @@ export default function TarjetasPage() {
         </div>
       )}
 
-      <Modal open={showForm} onClose={handleCloseForm} title="Nueva tarjeta">
+      <Modal open={showForm} onClose={handleCloseForm} title="Nueva cuenta">
         <CardForm onSuccess={() => { handleCloseForm(); refetch() }} />
       </Modal>
 
-      <Modal open={!!editingCard} onClose={handleCloseForm} title="Editar tarjeta">
+      <Modal open={!!editingCard} onClose={handleCloseForm} title="Editar cuenta">
         {editingCard && (
           <CardForm card={editingCard} onSuccess={() => { handleCloseForm(); refetch() }} />
         )}
@@ -116,8 +118,8 @@ export default function TarjetasPage() {
 
       <ConfirmDialog
         open={!!deleteId}
-        title="Eliminar tarjeta"
-        message="Esta accion no se puede deshacer. ¿Deseas continuar?"
+        title="Eliminar cuenta"
+        message="Esta accion no se puede deshacer. Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}

@@ -6,30 +6,30 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay,
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { clampDay, toNextBusinessDay } from '@/lib/utils/dates'
-import type { Card, IncomeSource, Account } from '@/types/database'
+import type { Account, RecurringRule, Debt } from '@/types/database'
 
 export default function CalendarioPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [cards, setCards] = useState<Card[]>([])
-  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [incomeRules, setIncomeRules] = useState<RecurringRule[]>([])
+  const [debts, setDebts] = useState<Debt[]>([])
 
   useEffect(() => {
     async function load() {
       if (!isSupabaseConfigured()) {
-        console.warn('[Nummo] Calendario: sin conexión a BD')
+        console.warn('[Nummo] Calendario: sin conexion a BD')
         return
       }
       try {
         const supabase = createClient()
-        const [c, i, a] = await Promise.all([
-          supabase.from('cards').select('*'),
-          supabase.from('income_sources').select('*'),
-          supabase.from('accounts').select('*').eq('is_paid', false),
+        const [a, r, d] = await Promise.all([
+          supabase.from('accounts').select('*').eq('is_active', true),
+          supabase.from('recurring_rules').select('*').eq('entry_type', 'income').eq('is_active', true),
+          supabase.from('debts').select('*').eq('is_paid', false),
         ])
-        setCards(c.data ?? [])
-        setIncomeSources(i.data ?? [])
         setAccounts(a.data ?? [])
+        setIncomeRules(r.data ?? [])
+        setDebts(d.data ?? [])
       } catch (err) {
         console.warn('[Nummo] Error al cargar calendario:', err)
       }
@@ -49,23 +49,23 @@ export default function CalendarioPage() {
     const monthRef = new Date(day.getFullYear(), day.getMonth(), 1)
     const prevMonthRef = subMonths(monthRef, 1)
 
-    cards.forEach((card) => {
-      if (card.cut_off_day != null && card.cut_off_day === dayNum) {
-        events.push({ label: `Corte ${card.alias}`, color: '#F59E0B', type: 'cutoff' })
+    accounts.forEach((account) => {
+      if (account.cut_off_day != null && account.cut_off_day === dayNum) {
+        events.push({ label: `Corte ${account.alias}`, color: '#F59E0B', type: 'cutoff' })
       }
-      if (card.payment_day != null) {
-        const adjusted = toNextBusinessDay(clampDay(card.payment_day, monthRef))
-        const adjustedPrev = toNextBusinessDay(clampDay(card.payment_day, prevMonthRef))
+      if (account.payment_day != null) {
+        const adjusted = toNextBusinessDay(clampDay(account.payment_day, monthRef))
+        const adjustedPrev = toNextBusinessDay(clampDay(account.payment_day, prevMonthRef))
         if (isSameDay(adjusted, day) || isSameDay(adjustedPrev, day)) {
-          events.push({ label: `Pago ${card.alias}`, color: '#EF4444', type: 'payment' })
+          events.push({ label: `Pago ${account.alias}`, color: '#EF4444', type: 'payment' })
         }
       }
     })
 
-    incomeSources.forEach((src) => {
-      if (!src.next_payment_date) return
-      const baseDate = new Date(src.next_payment_date + 'T12:00:00')
-      const stepDays = src.frequency === 'weekly' ? 7 : src.frequency === 'biweekly' ? 15 : 0
+    incomeRules.forEach((rule) => {
+      if (!rule.next_occurrence) return
+      const baseDate = new Date(rule.next_occurrence + 'T12:00:00')
+      const stepDays = rule.frequency === 'weekly' ? 7 : rule.frequency === 'biweekly' ? 15 : 0
       const advance = stepDays > 0
         ? (d: Date, dir: number) => addDays(d, stepDays * dir)
         : (d: Date, dir: number) => addMonths(d, dir)
@@ -74,33 +74,33 @@ export default function CalendarioPage() {
       while (isAfter(d, monthStart)) d = advance(d, -1)
       while (!isAfter(d, monthEnd)) {
         if (!isBefore(d, monthStart) && isSameDay(d, day)) {
-          events.push({ label: src.description, color: '#10B981', type: 'income' })
+          events.push({ label: rule.description, color: '#10B981', type: 'income' })
         }
         d = advance(d, 1)
       }
     })
 
-    accounts.forEach((acc) => {
-      if (!acc.due_date) return
-      const dueDate = new Date(acc.due_date + 'T12:00:00')
+    debts.forEach((debt) => {
+      if (!debt.due_date) return
+      const dueDate = new Date(debt.due_date + 'T12:00:00')
       if (isSameDay(dueDate, day)) {
-        const color = acc.type === 'payable' ? '#EF4444' : '#10B981'
-        const prefix = acc.type === 'payable' ? 'Pagar' : 'Cobrar'
-        events.push({ label: `${prefix}: ${acc.person_name}`, color, type: 'account' })
+        const color = debt.type === 'payable' ? '#EF4444' : '#10B981'
+        const prefix = debt.type === 'payable' ? 'Pagar' : 'Cobrar'
+        events.push({ label: `${prefix}: ${debt.person_name}`, color, type: 'debt' })
       }
     })
 
     return events
   }
 
-  const weekDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+  const weekDays = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab']
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold">Calendario</h1>
         <div className="mt-2 bg-accent/10 border border-accent/20 rounded-lg px-3 py-2 text-sm text-accent">
-          Sincronización con Google Calendar disponible próximamente
+          Sincronizacion con Google Calendar disponible proximamente
         </div>
       </div>
 

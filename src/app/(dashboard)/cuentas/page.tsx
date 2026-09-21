@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { Plus, Trash2, Check, ArrowDownLeft, ArrowUpRight, CalendarDays, Pencil } from 'lucide-react'
-import { useAccounts } from '@/lib/hooks/use-accounts'
-import { useCards } from '@/lib/hooks/use-cards'
+import { useDebts } from '@/lib/data/debts'
+import { useAccounts } from '@/lib/data/accounts'
+import { useLedger } from '@/lib/data/ledger'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Modal } from '@/components/ui/modal'
 import { Select } from '@/components/ui/select'
@@ -12,23 +13,23 @@ import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { createClient } from '@/lib/supabase/client'
-import type { Account, AccountType } from '@/types/database'
+import type { Debt, DebtType } from '@/types/database'
 
 export default function CuentasPage() {
-  const { accounts, loading, addAccount, updateAccount, deleteAccount } = useAccounts()
-  const { cards } = useCards()
+  const { debts, loading, addDebt, updateDebt, deleteDebt } = useDebts()
+  const { accounts } = useAccounts()
+  const { addEntry } = useLedger()
   const { toast } = useToast()
   const [showForm, setShowForm] = useState(false)
-  const [editingAccount, setEditingAccount] = useState<Account | null>(null)
+  const [editingDebt, setEditingDebt] = useState<Debt | null>(null)
   const [filter, setFilter] = useState<'all' | 'receivable' | 'payable'>('all')
   const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [payAccount, setPayAccount] = useState<Account | null>(null)
-  const [selectedCardId, setSelectedCardId] = useState('')
+  const [payDebt, setPayDebt] = useState<Debt | null>(null)
+  const [selectedAccountId, setSelectedAccountId] = useState('')
   const [payLoading, setPayLoading] = useState(false)
 
   const emptyForm = {
-    type: 'receivable' as AccountType,
+    type: 'receivable' as DebtType,
     person_name: '',
     description: '',
     amount: '',
@@ -39,20 +40,20 @@ export default function CuentasPage() {
   const [form, setForm] = useState(emptyForm)
 
   function openCreate() {
-    setEditingAccount(null)
+    setEditingDebt(null)
     setForm(emptyForm)
     setShowForm(true)
   }
 
-  function openEdit(account: Account) {
-    setEditingAccount(account)
+  function openEdit(debt: Debt) {
+    setEditingDebt(debt)
     setForm({
-      type: account.type,
-      person_name: account.person_name,
-      description: account.description,
-      amount: account.amount.toString(),
-      due_date: account.due_date ?? '',
-      is_paid: account.is_paid,
+      type: debt.type,
+      person_name: debt.person_name,
+      description: debt.description,
+      amount: debt.amount.toString(),
+      due_date: debt.due_date ?? '',
+      is_paid: debt.is_paid,
     })
     setShowForm(true)
   }
@@ -61,8 +62,8 @@ export default function CuentasPage() {
     e.preventDefault()
     if (!form.person_name || !form.amount) return
 
-    if (editingAccount) {
-      const result = await updateAccount(editingAccount.id, {
+    if (editingDebt) {
+      const result = await updateDebt(editingDebt.id, {
         type: form.type,
         person_name: form.person_name,
         description: form.description,
@@ -74,13 +75,13 @@ export default function CuentasPage() {
       } else {
         toast('Cuenta actualizada', 'success')
         setForm(emptyForm)
-        setEditingAccount(null)
+        setEditingDebt(null)
         setShowForm(false)
       }
       return
     }
 
-    const result = await addAccount({
+    const result = await addDebt({
       type: form.type,
       person_name: form.person_name,
       description: form.description,
@@ -98,49 +99,43 @@ export default function CuentasPage() {
     }
   }
 
-  function handleTogglePaid(account: Account) {
-    if (account.is_paid) {
-      updateAccount(account.id, { is_paid: false })
+  function handleTogglePaid(debt: Debt) {
+    if (debt.is_paid) {
+      updateDebt(debt.id, { is_paid: false })
       return
     }
-    setPayAccount(account)
-    setSelectedCardId('')
+    setPayDebt(debt)
+    setSelectedAccountId('')
   }
 
   async function confirmPay() {
-    if (!payAccount) return
+    if (!payDebt) return
     setPayLoading(true)
 
-    const result = await updateAccount(payAccount.id, { is_paid: true })
+    const result = await updateDebt(payDebt.id, { is_paid: true })
     if (result && 'error' in result && result.error) {
       toast('Error al actualizar', 'error')
       setPayLoading(false)
       return
     }
 
-    if (selectedCardId) {
-      const supabase = createClient()
-      const card = cards.find(c => c.id === selectedCardId)
-      if (card) {
-        const amount = Number(payAccount.amount)
-        if (payAccount.type === 'receivable') {
-          const newBalance = (card.balance ?? 0) + amount
-          await supabase.from('cards').update({ balance: newBalance }).eq('id', selectedCardId)
-        } else {
-          if (card.card_type === 'credit') {
-            const newUsed = (card.used_credit ?? 0) + amount
-            await supabase.from('cards').update({ used_credit: newUsed }).eq('id', selectedCardId)
-          } else {
-            const newBalance = (card.balance ?? 0) - amount
-            await supabase.from('cards').update({ balance: newBalance }).eq('id', selectedCardId)
-          }
-        }
-      }
+    if (selectedAccountId) {
+      const amount = Number(payDebt.amount)
+      const entryType = payDebt.type === 'receivable' ? 'income' : 'expense'
+      const sign = payDebt.type === 'receivable' ? 1 : -1
+      await addEntry({
+        account_id: selectedAccountId,
+        entry_type: entryType,
+        amount: amount * sign,
+        description: `${payDebt.type === 'receivable' ? 'Cobro' : 'Pago'}: ${payDebt.person_name}`,
+        occurred_on: new Date().toISOString().slice(0, 10),
+        source: 'app',
+      })
     }
 
-    const label = payAccount.type === 'receivable' ? 'Cobro registrado' : 'Pago registrado'
+    const label = payDebt.type === 'receivable' ? 'Cobro registrado' : 'Pago registrado'
     toast(label, 'success')
-    setPayAccount(null)
+    setPayDebt(null)
     setPayLoading(false)
   }
 
@@ -150,7 +145,7 @@ export default function CuentasPage() {
 
   async function confirmDelete() {
     if (!deleteId) return
-    const result = await deleteAccount(deleteId)
+    const result = await deleteDebt(deleteId)
     if (result?.error) {
       toast('Error al eliminar', 'error')
     } else {
@@ -159,17 +154,17 @@ export default function CuentasPage() {
     setDeleteId(null)
   }
 
-  const filtered = accounts.filter((a) => {
+  const filtered = debts.filter((d) => {
     if (filter === 'all') return true
-    return a.type === filter
+    return d.type === filter
   })
 
-  const totalReceivable = accounts.filter((a) => a.type === 'receivable' && !a.is_paid).reduce((s, a) => s + Number(a.amount), 0)
-  const totalPayable = accounts.filter((a) => a.type === 'payable' && !a.is_paid).reduce((s, a) => s + Number(a.amount), 0)
+  const totalReceivable = debts.filter((d) => d.type === 'receivable' && !d.is_paid).reduce((s, d) => s + Number(d.amount), 0)
+  const totalPayable = debts.filter((d) => d.type === 'payable' && !d.is_paid).reduce((s, d) => s + Number(d.amount), 0)
 
-  const cardOptions = payAccount?.type === 'receivable'
-    ? cards.filter(c => c.card_type !== 'credit').map(c => ({ value: c.id, label: `${c.alias} (${c.bank_name})` }))
-    : cards.map(c => ({ value: c.id, label: `${c.alias} (${c.bank_name})` }))
+  const accountOptions = payDebt?.type === 'receivable'
+    ? accounts.filter(a => a.account_type !== 'credit_card').map(a => ({ value: a.id, label: `${a.alias} (${a.institution ?? ''})` }))
+    : accounts.map(a => ({ value: a.id, label: `${a.alias} (${a.institution ?? ''})` }))
 
   if (loading) {
     return (
@@ -246,7 +241,7 @@ export default function CuentasPage() {
 
           <input
             type="text"
-            placeholder="Descripción (opcional)"
+            placeholder="Descripcion (opcional)"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
@@ -276,11 +271,11 @@ export default function CuentasPage() {
               type="submit"
               className="bg-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-hover transition"
             >
-              {editingAccount ? 'Guardar cambios' : 'Guardar'}
+              {editingDebt ? 'Guardar cambios' : 'Guardar'}
             </button>
             <button
               type="button"
-              onClick={() => { setShowForm(false); setEditingAccount(null) }}
+              onClick={() => { setShowForm(false); setEditingDebt(null) }}
               className="px-4 py-2 rounded-lg text-sm text-muted hover:bg-gray-50 transition"
             >
               Cancelar
@@ -311,60 +306,60 @@ export default function CuentasPage() {
         {filtered.length === 0 && (
           <p className="text-center text-sm text-muted py-8">No hay cuentas registradas</p>
         )}
-        {filtered.map((account) => (
+        {filtered.map((debt) => (
           <div
-            key={account.id}
+            key={debt.id}
             className={`bg-white rounded-xl border border-border p-4 flex items-center gap-3 ${
-              account.is_paid ? 'opacity-60' : ''
+              debt.is_paid ? 'opacity-60' : ''
             }`}
           >
             <button
-              onClick={() => handleTogglePaid(account)}
+              onClick={() => handleTogglePaid(debt)}
               className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition ${
-                account.is_paid
+                debt.is_paid
                   ? 'bg-success border-success text-white'
                   : 'border-border hover:border-accent'
               }`}
             >
-              {account.is_paid && <Check size={14} />}
+              {debt.is_paid && <Check size={14} />}
             </button>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                  account.type === 'receivable'
+                  debt.type === 'receivable'
                     ? 'bg-success/10 text-success'
                     : 'bg-danger/10 text-danger'
                 }`}>
-                  {account.type === 'receivable' ? 'Por cobrar' : 'Por pagar'}
+                  {debt.type === 'receivable' ? 'Por cobrar' : 'Por pagar'}
                 </span>
-                <span className="text-sm font-medium truncate">{account.person_name}</span>
+                <span className="text-sm font-medium truncate">{debt.person_name}</span>
               </div>
-              {account.description && (
-                <p className="text-xs text-muted truncate mt-0.5">{account.description}</p>
+              {debt.description && (
+                <p className="text-xs text-muted truncate mt-0.5">{debt.description}</p>
               )}
-              {account.due_date && (
+              {debt.due_date && (
                 <div className="flex items-center gap-1 mt-1 text-xs text-muted">
                   <CalendarDays size={12} />
-                  <span>{format(new Date(account.due_date), "d 'de' MMMM yyyy", { locale: es })}</span>
+                  <span>{format(new Date(debt.due_date), "d 'de' MMMM yyyy", { locale: es })}</span>
                 </div>
               )}
             </div>
 
             <p className={`text-sm font-bold shrink-0 ${
-              account.type === 'receivable' ? 'text-success' : 'text-danger'
+              debt.type === 'receivable' ? 'text-success' : 'text-danger'
             }`}>
-              {formatMXN(Number(account.amount))}
+              {formatMXN(Number(debt.amount))}
             </p>
 
             <button
-              onClick={() => openEdit(account)}
+              onClick={() => openEdit(debt)}
               className="shrink-0 p-1.5 text-muted hover:text-accent rounded-lg hover:bg-accent/5 transition"
             >
               <Pencil size={14} />
             </button>
             <button
-              onClick={() => handleDelete(account.id)}
+              onClick={() => handleDelete(debt.id)}
               className="shrink-0 p-1.5 text-muted hover:text-danger rounded-lg hover:bg-danger/5 transition"
             >
               <Trash2 size={16} />
@@ -374,43 +369,43 @@ export default function CuentasPage() {
       </div>
 
       <Modal
-        open={!!payAccount}
-        onClose={() => setPayAccount(null)}
-        title={payAccount?.type === 'receivable' ? 'Registrar cobro' : 'Registrar pago'}
+        open={!!payDebt}
+        onClose={() => setPayDebt(null)}
+        title={payDebt?.type === 'receivable' ? 'Registrar cobro' : 'Registrar pago'}
       >
-        {payAccount && (
+        {payDebt && (
           <div className="space-y-4">
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-sm">
-                <span className="font-medium">{payAccount.person_name}</span>
-                {payAccount.description && <span className="text-muted"> - {payAccount.description}</span>}
+                <span className="font-medium">{payDebt.person_name}</span>
+                {payDebt.description && <span className="text-muted"> - {payDebt.description}</span>}
               </p>
-              <p className={`text-lg font-bold mt-1 ${payAccount.type === 'receivable' ? 'text-success' : 'text-danger'}`}>
-                {formatMXN(Number(payAccount.amount))}
+              <p className={`text-lg font-bold mt-1 ${payDebt.type === 'receivable' ? 'text-success' : 'text-danger'}`}>
+                {formatMXN(Number(payDebt.amount))}
               </p>
             </div>
 
             <Select
-              id="payCard"
-              label={payAccount.type === 'receivable' ? '¿A qué cuenta se depositó?' : '¿De qué cuenta se pagó?'}
-              value={selectedCardId}
-              onChange={(e) => setSelectedCardId(e.target.value)}
-              options={cardOptions}
+              id="payAccount"
+              label={payDebt.type === 'receivable' ? 'A que cuenta se deposito?' : 'De que cuenta se pago?'}
+              value={selectedAccountId}
+              onChange={(e) => setSelectedAccountId(e.target.value)}
+              options={accountOptions}
               placeholder="Selecciona una cuenta"
             />
 
             <p className="text-xs text-muted">
-              {payAccount.type === 'receivable'
-                ? 'Se sumará el monto al saldo de la cuenta seleccionada.'
-                : 'Se descontará el monto del saldo de la cuenta seleccionada.'}
+              {payDebt.type === 'receivable'
+                ? 'Se registrara un ingreso en la cuenta seleccionada.'
+                : 'Se registrara un gasto en la cuenta seleccionada.'}
             </p>
 
             <div className="flex gap-2">
               <Button onClick={confirmPay} loading={payLoading} className="flex-1">
-                {payAccount.type === 'receivable' ? 'Confirmar cobro' : 'Confirmar pago'}
+                {payDebt.type === 'receivable' ? 'Confirmar cobro' : 'Confirmar pago'}
               </Button>
               <button
-                onClick={() => setPayAccount(null)}
+                onClick={() => setPayDebt(null)}
                 className="px-4 py-2 rounded-lg text-sm text-muted hover:bg-gray-50 transition"
               >
                 Cancelar
@@ -423,7 +418,7 @@ export default function CuentasPage() {
       <ConfirmDialog
         open={!!deleteId}
         title="Eliminar cuenta"
-        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
+        message="Esta accion no se puede deshacer. Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}

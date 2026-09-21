@@ -1,9 +1,9 @@
 'use client'
 
-import type { Card } from '@/types/database'
+import type { Account } from '@/types/database'
 
 interface CardSelectorProps {
-  cards: Card[]
+  cards: Account[]
   value: string | null
   onChange: (cardId: string | null) => void
   label?: string
@@ -11,28 +11,29 @@ interface CardSelectorProps {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  credit: 'Crédito',
-  debit: 'Débito',
+  credit_card: 'Credito',
+  debit: 'Debito',
   cash: 'Efectivo',
   savings: 'Ahorro',
   voucher: 'Vales',
+  investment: 'Inversion',
 }
 
-function cardLabel(card: Card): string {
-  if (card.card_type === 'cash') return card.alias
-  if (card.card_type === 'voucher') return `${card.alias} (${card.bank_name})`
-  const digits = card.last_four_digits ? ` ****${card.last_four_digits}` : ''
-  return `${card.alias} (${card.bank_name}${digits})`
+function accountLabel(account: Account): string {
+  if (account.account_type === 'cash') return account.alias
+  if (account.account_type === 'voucher') return `${account.alias} (${account.institution ?? ''})`
+  const digits = account.last_four ? ` ****${account.last_four}` : ''
+  return `${account.alias} (${account.institution ?? ''}${digits})`
 }
 
 export function CardSelector({ cards, value, onChange, label = 'Origen / destino', filterTypes }: CardSelectorProps) {
-  const filtered = filterTypes ? cards.filter(c => filterTypes.includes(c.card_type)) : cards
+  const filtered = filterTypes ? cards.filter(c => filterTypes.includes(c.account_type)) : cards
 
-  const grouped: Record<string, Card[]> = {}
-  for (const card of filtered) {
-    const type = TYPE_LABELS[card.card_type] ?? card.card_type
+  const grouped: Record<string, Account[]> = {}
+  for (const account of filtered) {
+    const type = TYPE_LABELS[account.account_type] ?? account.account_type
     if (!grouped[type]) grouped[type] = []
-    grouped[type].push(card)
+    grouped[type].push(account)
   }
 
   return (
@@ -46,9 +47,9 @@ export function CardSelector({ cards, value, onChange, label = 'Origen / destino
         <option value="">Sin especificar</option>
         {Object.entries(grouped).map(([type, items]) => (
           <optgroup key={type} label={type}>
-            {items.map((card) => (
-              <option key={card.id} value={card.id}>
-                {cardLabel(card)}
+            {items.map((account) => (
+              <option key={account.id} value={account.id}>
+                {accountLabel(account)}
               </option>
             ))}
           </optgroup>

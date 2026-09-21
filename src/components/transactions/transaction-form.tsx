@@ -5,41 +5,42 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CategoryPicker } from './category-picker'
 import { CardSelector } from '@/components/cards/card-selector'
-import { useCards } from '@/lib/hooks/use-cards'
-import { useTransactions } from '@/lib/hooks/use-transactions'
+import { useAccounts } from '@/lib/data/accounts'
+import { useLedger } from '@/lib/data/ledger'
+import { useCategories } from '@/lib/data/categories'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { useExchangeRate } from '@/lib/hooks/use-exchange-rate'
 import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
 import { todayMX } from '@/lib/utils/dates'
-import type { Transaction, TransactionType } from '@/types/database'
+import type { LedgerEntry, EntryType } from '@/types/database'
 
 interface TransactionFormProps {
-  type: TransactionType
-  transaction?: Transaction
+  type: 'expense' | 'income'
+  entry?: LedgerEntry
   onSuccess?: () => void
 }
 
-export function TransactionForm({ type, transaction, onSuccess }: TransactionFormProps) {
+export function TransactionForm({ type, entry, onSuccess }: TransactionFormProps) {
   const [amount, setAmount] = useState(() => {
-    if (!transaction) return ''
-    if (transaction.currency === 'USD' && transaction.exchange_rate) {
-      return (transaction.amount / transaction.exchange_rate).toFixed(2)
+    if (!entry) return ''
+    if (entry.currency === 'USD' && entry.fx_rate) {
+      return (Math.abs(entry.amount) / entry.fx_rate).toFixed(2)
     }
-    return transaction.amount.toString()
+    return Math.abs(entry.amount).toString()
   })
-  const [description, setDescription] = useState(transaction?.description ?? '')
-  const [category, setCategory] = useState(transaction?.category ?? (type === 'expense' ? 'otros' : 'nomina'))
-  const [cardId, setCardId] = useState<string | null>(transaction?.card_id ?? null)
-  const [date, setDate] = useState(transaction?.date ?? todayMX())
-  const [installmentMonths, setInstallmentMonths] = useState(transaction?.installment_months?.toString() ?? '')
-  const [currency, setCurrency] = useState<'MXN' | 'USD'>((transaction?.currency as 'MXN' | 'USD') ?? 'MXN')
+  const [description, setDescription] = useState(entry?.description ?? '')
+  const [categorySlug, setCategorySlug] = useState(entry?.category?.slug ?? (type === 'expense' ? 'otros' : 'nomina'))
+  const [accountId, setAccountId] = useState<string | null>(entry?.account_id ?? null)
+  const [date, setDate] = useState(entry?.occurred_on ?? todayMX())
+  const [currency, setCurrency] = useState<'MXN' | 'USD'>((entry?.currency as 'MXN' | 'USD') ?? 'MXN')
   const [loading, setLoading] = useState(false)
 
-  const isEditing = !!transaction
+  const isEditing = !!entry
 
-  const { cards } = useCards()
-  const { addTransaction, updateTransaction } = useTransactions()
+  const { accounts } = useAccounts()
+  const { addEntry, updateEntry } = useLedger()
+  const { categories, getBySlug } = useCategories()
   const { rate: exchangeRate } = useExchangeRate()
   const { toast } = useToast()
 
@@ -51,42 +52,40 @@ export function TransactionForm({ type, transaction, onSuccess }: TransactionFor
     e.preventDefault()
     const numAmount = parseFloat(amount)
     if (!numAmount || numAmount <= 0) {
-      toast('Ingresa un monto válido', 'error')
+      toast('Ingresa un monto valido', 'error')
       return
     }
 
     setLoading(true)
     const finalAmount = currency === 'USD' && exchangeRate ? numAmount * exchangeRate : numAmount
+    const cat = getBySlug(categorySlug)
 
     let result
     if (isEditing) {
-      result = await updateTransaction(transaction.id, {
-        amount: finalAmount,
+      result = await updateEntry(entry.id, {
+        amount: type === 'expense' ? -Math.abs(finalAmount) : Math.abs(finalAmount),
         description,
-        category,
-        card_id: cardId,
-        date,
-        installment_months: installmentMonths ? parseInt(installmentMonths) : null,
+        category_id: cat?.id ?? null,
+        account_id: accountId,
+        occurred_on: date,
         currency,
-        exchange_rate: currency === 'USD' ? exchangeRate : null,
+        fx_rate: currency === 'USD' ? exchangeRate : null,
+        amount_original: currency === 'USD' ? numAmount : null,
+        amount_base: currency === 'USD' ? finalAmount : null,
       })
     } else {
-      result = await addTransaction({
-        amount: finalAmount,
+      result = await addEntry({
+        amount: type === 'expense' ? -Math.abs(finalAmount) : Math.abs(finalAmount),
         description,
-        category,
-        type,
-        card_id: cardId,
-        date,
-        is_recurring: false,
-        installment_months: installmentMonths ? parseInt(installmentMonths) : null,
-        installment_current: installmentMonths ? 1 : null,
-        notes: null,
-        is_transfer: false,
-        transfer_from_card_id: null,
-        transfer_to_card_id: null,
+        category_id: cat?.id ?? null,
+        entry_type: type as EntryType,
+        account_id: accountId,
+        occurred_on: date,
+        source: 'app',
         currency,
-        exchange_rate: currency === 'USD' ? exchangeRate : null,
+        fx_rate: currency === 'USD' ? exchangeRate : null,
+        amount_original: currency === 'USD' ? numAmount : null,
+        amount_base: currency === 'USD' ? finalAmount : null,
       })
     }
 
@@ -94,7 +93,6 @@ export function TransactionForm({ type, transaction, onSuccess }: TransactionFor
 
     if (result?.error) {
       const msg = result.error.message || 'Error al guardar'
-      console.error('[Nummo] Error transaccion:', result.error)
       toast(msg, 'error')
       return
     }
@@ -107,16 +105,14 @@ export function TransactionForm({ type, transaction, onSuccess }: TransactionFor
     if (!isEditing) {
       setAmount('')
       setDescription('')
-      setCategory(type === 'expense' ? 'otros' : 'nomina')
-      setCardId(null)
-      setInstallmentMonths('')
+      setCategorySlug(type === 'expense' ? 'otros' : 'nomina')
+      setAccountId(null)
       setCurrency('MXN')
     }
     onSuccess?.()
   }
 
-  const selectedCard = cards.find((c) => c.id === cardId)
-  const showInstallments = type === 'expense' && selectedCard?.card_type === 'credit'
+  const selectedAccount = accounts.find((a) => a.id === accountId)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -163,16 +159,16 @@ export function TransactionForm({ type, transaction, onSuccess }: TransactionFor
 
       <Input
         id="description"
-        label="Descripción"
+        label="Descripcion"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder={type === 'expense' ? '¿En qué gastaste?' : '¿De dónde proviene?'}
+        placeholder={type === 'expense' ? 'En que gastaste?' : 'De donde proviene?'}
         required
       />
 
-      <CategoryPicker type={type} value={category} onChange={setCategory} />
+      <CategoryPicker type={type} value={categorySlug} onChange={setCategorySlug} />
 
-      <CardSelector cards={cards} value={cardId} onChange={setCardId} />
+      <CardSelector cards={accounts} value={accountId} onChange={setAccountId} />
 
       <Input
         id="date"
@@ -181,19 +177,6 @@ export function TransactionForm({ type, transaction, onSuccess }: TransactionFor
         value={date}
         onChange={(e) => setDate(e.target.value)}
       />
-
-      {showInstallments && (
-        <Input
-          id="installments"
-          label="Meses sin intereses (MSI)"
-          type="number"
-          value={installmentMonths}
-          onChange={(e) => setInstallmentMonths(e.target.value)}
-          placeholder="Dejar vacío si es de contado"
-          min="2"
-          max="48"
-        />
-      )}
 
       <Button type="submit" loading={loading} className="w-full" size="lg">
         {isEditing ? 'Guardar cambios' : (type === 'expense' ? 'Registrar gasto' : 'Registrar ingreso')}

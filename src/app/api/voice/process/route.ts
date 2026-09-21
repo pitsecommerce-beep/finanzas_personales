@@ -5,19 +5,19 @@ import { todayMX } from '@/lib/utils/dates'
 const TOOLS = [
   {
     name: 'add_expense',
-    description: 'Registra un gasto. Requiere monto, descripción y categoría. Opcionalmente tarjeta, fecha y meses sin intereses.',
+    description: 'Registra un gasto. Requiere monto, descripcion y categoria. Opcionalmente cuenta, fecha y meses sin intereses.',
     input_schema: {
       type: 'object' as const,
       properties: {
         amount: { type: 'number' as const, description: 'Monto en MXN' },
-        description: { type: 'string' as const, description: 'Descripción del gasto' },
+        description: { type: 'string' as const, description: 'Descripcion del gasto' },
         category: {
           type: 'string' as const,
           enum: ['restaurante','transporte','despensa','entretenimiento','salud','educacion','servicios','ropa','hogar','mascotas','viajes','regalos','suscripciones','cafe','gimnasio','otros'],
         },
-        card_id: { type: 'string' as const, description: 'UUID de la tarjeta. Si no se especifica, queda null.' },
+        account_id: { type: 'string' as const, description: 'UUID de la cuenta. Si no se especifica, queda null.' },
         date: { type: 'string' as const, description: 'Fecha YYYY-MM-DD. Si no se dice, usa hoy.' },
-        installment_months: { type: 'number' as const, description: 'Meses sin intereses (2-48). Solo para tarjetas de crédito.' },
+        installment_months: { type: 'number' as const, description: 'Meses sin intereses (2-48). Solo para tarjetas de credito.' },
       },
       required: ['amount', 'description', 'category'],
     },
@@ -29,12 +29,12 @@ const TOOLS = [
       type: 'object' as const,
       properties: {
         amount: { type: 'number' as const, description: 'Monto en MXN' },
-        description: { type: 'string' as const, description: 'Descripción del ingreso' },
+        description: { type: 'string' as const, description: 'Descripcion del ingreso' },
         category: {
           type: 'string' as const,
           enum: ['nomina','freelance','negocio','inversiones','rendimientos','renta','venta','otros'],
         },
-        card_id: { type: 'string' as const, description: 'UUID de la tarjeta destino' },
+        account_id: { type: 'string' as const, description: 'UUID de la cuenta destino' },
         date: { type: 'string' as const, description: 'Fecha YYYY-MM-DD' },
       },
       required: ['amount', 'description', 'category'],
@@ -48,13 +48,12 @@ const TOOLS = [
       properties: {
         description: { type: 'string' as const },
         monthly_amount: { type: 'number' as const, description: 'Monto mensual en MXN' },
-        total_months: { type: 'number' as const, description: 'Número de meses. 1 para recurrente, 2-48 para MSI.' },
-        is_msi: { type: 'boolean' as const, description: 'true si son meses sin intereses' },
+        total_months: { type: 'number' as const, description: 'Numero de meses. 1 para recurrente, 2-48 para MSI.' },
         category: {
           type: 'string' as const,
           enum: ['restaurante','transporte','despensa','entretenimiento','salud','educacion','servicios','ropa','hogar','mascotas','viajes','regalos','suscripciones','cafe','gimnasio','otros'],
         },
-        card_id: { type: 'string' as const, description: 'UUID de la tarjeta' },
+        account_id: { type: 'string' as const, description: 'UUID de la cuenta' },
         start_date: { type: 'string' as const, description: 'Fecha inicio YYYY-MM-DD' },
       },
       required: ['description', 'monthly_amount', 'category'],
@@ -62,22 +61,21 @@ const TOOLS = [
   },
   {
     name: 'add_income_source',
-    description: 'Registra una fuente de ingreso fija (nómina, freelance, negocio, etc.).',
+    description: 'Registra una fuente de ingreso fija (nomina, freelance, negocio, etc.).',
     input_schema: {
       type: 'object' as const,
       properties: {
         description: { type: 'string' as const, description: 'Nombre del ingreso' },
         amount: { type: 'number' as const, description: 'Monto aproximado' },
         frequency: { type: 'string' as const, enum: ['weekly','biweekly','monthly'] },
-        income_type: { type: 'string' as const, enum: ['salary','freelance','business','investment','rental','other'] },
-        card_id: { type: 'string' as const, description: 'UUID de la cuenta destino' },
-        next_payment_date: { type: 'string' as const, description: 'Próximo pago YYYY-MM-DD' },
+        account_id: { type: 'string' as const, description: 'UUID de la cuenta destino' },
+        next_occurrence: { type: 'string' as const, description: 'Proximo pago YYYY-MM-DD' },
       },
-      required: ['description', 'amount', 'frequency', 'income_type'],
+      required: ['description', 'amount', 'frequency'],
     },
   },
   {
-    name: 'add_account',
+    name: 'add_debt',
     description: 'Registra una cuenta por cobrar o por pagar.',
     input_schema: {
       type: 'object' as const,
@@ -86,14 +84,14 @@ const TOOLS = [
         person_name: { type: 'string' as const, description: 'Nombre de la persona' },
         description: { type: 'string' as const },
         amount: { type: 'number' as const },
-        due_date: { type: 'string' as const, description: 'Fecha límite YYYY-MM-DD' },
+        due_date: { type: 'string' as const, description: 'Fecha limite YYYY-MM-DD' },
       },
       required: ['type', 'person_name', 'amount'],
     },
   },
   {
     name: 'ask_user',
-    description: 'Pregunta al usuario cuando falta información para completar el registro. Usa esto cuando no tengas datos suficientes.',
+    description: 'Pregunta al usuario cuando falta informacion para completar el registro. Usa esto cuando no tengas datos suficientes.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -104,71 +102,76 @@ const TOOLS = [
   },
 ]
 
+async function resolveCategoryId(slug: string, supabase: any): Promise<string | null> {
+  const { data } = await supabase
+    .from('categories')
+    .select('id')
+    .eq('slug', slug)
+    .single()
+  return data?.id ?? null
+}
+
 async function executeTool(
   toolName: string,
   input: Record<string, unknown>,
   userId: string,
   supabase: Awaited<ReturnType<typeof createClient>>,
-  cards: Array<{ id: string; alias: string; card_type: string }>
+  accounts: Array<{ id: string; alias: string; account_type: string }>
 ) {
   const today = todayMX()
 
   switch (toolName) {
     case 'add_expense': {
+      const categoryId = await resolveCategoryId((input.category as string) || 'otros', supabase)
       const data = {
         user_id: userId,
-        amount: input.amount as number,
+        account_id: (input.account_id as string) || null,
+        entry_type: 'expense',
+        amount: -Math.abs(input.amount as number),
         description: input.description as string,
-        category: input.category as string,
-        type: 'expense',
-        card_id: (input.card_id as string) || null,
-        date: (input.date as string) || today,
-        is_recurring: false,
-        installment_months: (input.installment_months as number) || null,
-        installment_current: input.installment_months ? 1 : null,
-        notes: null,
-        is_transfer: false,
-        transfer_from_card_id: null,
-        transfer_to_card_id: null,
+        category_id: categoryId,
+        occurred_on: (input.date as string) || today,
+        source: 'app',
         currency: 'MXN',
-        exchange_rate: null,
       }
-      const { error } = await supabase.from('transactions').insert(data)
+      const { error } = await supabase.from('ledger_entries').insert(data)
       if (error) return `Error: ${error.message}`
 
-      if (data.card_id) {
-        const card = cards.find(c => c.id === data.card_id)
-        if (card?.card_type === 'credit') {
-          await supabase.rpc('increment_field', { row_id: data.card_id, table_name: 'cards', field_name: 'used_credit', amount: data.amount })
-            .then(() => {}, () => {
-              supabase.from('cards').update({ used_credit: data.amount }).eq('id', data.card_id!)
-            })
-        }
+      if (input.installment_months) {
+        const months = input.installment_months as number
+        const monthly = Math.abs(input.amount as number) / months
+        await supabase.from('installment_plans').insert({
+          user_id: userId,
+          account_id: (input.account_id as string) || null,
+          description: input.description as string,
+          total_amount: Math.abs(input.amount as number),
+          monthly_amount: monthly,
+          total_months: months,
+          remaining_months: months,
+          start_date: (input.date as string) || today,
+          category_id: categoryId,
+          currency: 'MXN',
+          is_active: true,
+        })
       }
 
-      return `Gasto registrado: $${data.amount} - ${data.description}`
+      return `Gasto registrado: $${Math.abs(input.amount as number)} - ${input.description}`
     }
 
     case 'add_income': {
+      const categoryId = await resolveCategoryId((input.category as string) || 'otros', supabase)
       const data = {
         user_id: userId,
-        amount: input.amount as number,
+        account_id: (input.account_id as string) || null,
+        entry_type: 'income',
+        amount: Math.abs(input.amount as number),
         description: input.description as string,
-        category: (input.category as string) || 'otros',
-        type: 'income',
-        card_id: (input.card_id as string) || null,
-        date: (input.date as string) || today,
-        is_recurring: false,
-        installment_months: null,
-        installment_current: null,
-        notes: null,
-        is_transfer: false,
-        transfer_from_card_id: null,
-        transfer_to_card_id: null,
+        category_id: categoryId,
+        occurred_on: (input.date as string) || today,
+        source: 'app',
         currency: 'MXN',
-        exchange_rate: null,
       }
-      const { error } = await supabase.from('transactions').insert(data)
+      const { error } = await supabase.from('ledger_entries').insert(data)
       if (error) return `Error: ${error.message}`
       return `Ingreso registrado: $${data.amount} - ${data.description}`
     }
@@ -176,22 +179,21 @@ async function executeTool(
     case 'add_fixed_expense': {
       const months = (input.total_months as number) || 1
       const monthly = input.monthly_amount as number
+      const categoryId = await resolveCategoryId((input.category as string) || 'otros', supabase)
       const data = {
         user_id: userId,
+        account_id: (input.account_id as string) || null,
         description: input.description as string,
-        total_amount: (input.is_msi ? monthly * months : monthly),
+        total_amount: monthly * months,
         monthly_amount: monthly,
         total_months: months,
-        card_id: (input.card_id as string) || null,
+        remaining_months: months,
         start_date: (input.start_date as string) || today,
-        end_date: null,
-        is_msi: (input.is_msi as boolean) || false,
-        category: (input.category as string) || 'otros',
-        status: 'active',
+        category_id: categoryId,
         currency: 'MXN',
-        exchange_rate: null,
+        is_active: true,
       }
-      const { error } = await supabase.from('fixed_expenses').insert(data)
+      const { error } = await supabase.from('installment_plans').insert(data)
       if (error) return `Error: ${error.message}`
       return `Gasto fijo registrado: $${monthly}/mes - ${data.description}`
     }
@@ -199,19 +201,21 @@ async function executeTool(
     case 'add_income_source': {
       const data = {
         user_id: userId,
+        account_id: (input.account_id as string) || null,
+        entry_type: 'income',
         description: input.description as string,
         amount: input.amount as number,
         frequency: (input.frequency as string) || 'monthly',
-        income_type: (input.income_type as string) || 'other',
-        card_id: (input.card_id as string) || null,
-        next_payment_date: (input.next_payment_date as string) || null,
+        next_occurrence: (input.next_occurrence as string) || null,
+        is_active: true,
+        currency: 'MXN',
       }
-      const { error } = await supabase.from('income_sources').insert(data)
+      const { error } = await supabase.from('recurring_rules').insert(data)
       if (error) return `Error: ${error.message}`
       return `Fuente de ingreso registrada: $${data.amount} (${data.frequency}) - ${data.description}`
     }
 
-    case 'add_account': {
+    case 'add_debt': {
       const data = {
         user_id: userId,
         type: input.type as string,
@@ -221,7 +225,7 @@ async function executeTool(
         due_date: (input.due_date as string) || null,
         is_paid: false,
       }
-      const { error } = await supabase.from('accounts').insert(data)
+      const { error } = await supabase.from('debts').insert(data)
       if (error) return `Error: ${error.message}`
       const label = data.type === 'receivable' ? 'Cuenta por cobrar' : 'Cuenta por pagar'
       return `${label} registrada: $${data.amount} - ${data.person_name}`
@@ -253,33 +257,34 @@ export async function POST(request: NextRequest) {
 
   const { text, conversation } = await request.json()
 
-  const { data: cardsData } = await supabase
-    .from('cards')
-    .select('id, alias, card_type, bank_name, balance')
+  const { data: accountsData } = await supabase
+    .from('accounts')
+    .select('id, alias, account_type, institution')
     .eq('user_id', user.id)
+    .eq('is_active', true)
 
-  const cards = cardsData ?? []
+  const accounts = accountsData ?? []
 
-  const cardsContext = cards.map(c =>
-    `- ${c.alias} (${c.bank_name}, ${c.card_type}, id: ${c.id}${c.balance != null ? `, saldo: $${c.balance}` : ''})`
+  const accountsContext = accounts.map(a =>
+    `- ${a.alias} (${a.institution ?? ''}, ${a.account_type}, id: ${a.id})`
   ).join('\n')
 
   const systemPrompt = `Eres el asistente de voz de Nummo, una app de finanzas personales.
 El usuario te dicta por voz lo que quiere registrar. Tu trabajo es interpretar su mensaje y usar las herramientas para registrar gastos, ingresos, gastos fijos, fuentes de ingreso o cuentas por cobrar/pagar.
 
 REGLAS:
-- Si falta información esencial (monto, descripción), usa ask_user para preguntar
-- Si el usuario menciona una tarjeta por nombre, busca el ID en la lista de tarjetas
-- Si dice "a meses" o "MSI", usa installment_months en add_expense o is_msi en add_fixed_expense
-- Si dice "me deben" o "le presté a", es cuenta por cobrar (receivable)
+- Si falta informacion esencial (monto, descripcion), usa ask_user para preguntar
+- Si el usuario menciona una cuenta o tarjeta por nombre, busca el ID en la lista de cuentas
+- Si dice "a meses" o "MSI", usa installment_months en add_expense o add_fixed_expense
+- Si dice "me deben" o "le preste a", es cuenta por cobrar (receivable)
 - Si dice "le debo" o "tengo que pagar", es cuenta por pagar (payable)
 - Si dice "gasto fijo" o "pago mensual" o "renta" o "servicio recurrente", usa add_fixed_expense
-- Si dice "me pagan" o "mi sueldo" o "nómina", usa add_income_source para ingresos fijos
-- Responde siempre en español, de forma breve y en texto plano (sin markdown, sin asteriscos, sin negritas)
+- Si dice "me pagan" o "mi sueldo" o "nomina", usa add_income_source para ingresos fijos
+- Responde siempre en espanol, de forma breve y en texto plano (sin markdown, sin asteriscos, sin negritas)
 - La fecha de hoy es ${todayMX()}
 
-TARJETAS DEL USUARIO:
-${cardsContext || 'No tiene tarjetas registradas'}
+CUENTAS DEL USUARIO:
+${accountsContext || 'No tiene cuentas registradas'}
 `
 
   const messages = conversation ?? [{ role: 'user', content: text }]
@@ -311,7 +316,7 @@ ${cardsContext || 'No tiene tarjetas registradas'}
           })
         }
 
-        const result = await executeTool(block.name, block.input as Record<string, unknown>, user.id, supabase, cards)
+        const result = await executeTool(block.name, block.input as Record<string, unknown>, user.id, supabase, accounts)
         actions.push(result)
         toolResults.push({
           type: 'tool_result',

@@ -4,80 +4,72 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CurrencyInput } from '@/components/ui/currency-input'
-import { useCards } from '@/lib/hooks/use-cards'
-import { useTransactions } from '@/lib/hooks/use-transactions'
+import { useAccounts } from '@/lib/data/accounts'
+import { useLedger } from '@/lib/data/ledger'
 import { useToast } from '@/components/ui/toast'
 import { todayMX } from '@/lib/utils/dates'
-import type { Card } from '@/types/database'
+import type { Account } from '@/types/database'
 
 interface TransferFormProps {
   onSuccess?: () => void
 }
 
-function cardLabel(card: Card): string {
-  if (card.card_type === 'cash') return card.alias
-  if (card.card_type === 'voucher') return `${card.alias} (${card.bank_name})`
-  const digits = card.last_four_digits ? ` ****${card.last_four_digits}` : ''
-  return `${card.alias} (${card.bank_name}${digits})`
+function accountLabel(account: Account): string {
+  if (account.account_type === 'cash') return account.alias
+  if (account.account_type === 'voucher') return `${account.alias} (${account.institution})`
+  const digits = account.last_four ? ` ****${account.last_four}` : ''
+  return `${account.alias} (${account.institution ?? ''}${digits})`
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  credit: 'Crédito',
-  debit: 'Débito',
+  credit_card: 'Credito',
+  debit: 'Debito',
   cash: 'Efectivo',
   savings: 'Ahorro',
   voucher: 'Vales',
+  investment: 'Inversion',
 }
 
 export function TransferForm({ onSuccess }: TransferFormProps) {
-  const [fromCardId, setFromCardId] = useState<string>('')
-  const [toCardId, setToCardId] = useState<string>('')
+  const [fromAccountId, setFromAccountId] = useState<string>('')
+  const [toAccountId, setToAccountId] = useState<string>('')
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
   const [date, setDate] = useState(todayMX())
   const [loading, setLoading] = useState(false)
 
-  const { cards } = useCards()
-  const { addTransaction } = useTransactions()
+  const { accounts } = useAccounts()
+  const { addTransfer } = useLedger()
   const { toast } = useToast()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const numAmount = parseFloat(amount)
     if (!numAmount || numAmount <= 0) {
-      toast('Ingresa un monto válido', 'error')
+      toast('Ingresa un monto valido', 'error')
       return
     }
-    if (!fromCardId || !toCardId) {
+    if (!fromAccountId || !toAccountId) {
       toast('Selecciona cuenta de origen y destino', 'error')
       return
     }
-    if (fromCardId === toCardId) {
+    if (fromAccountId === toAccountId) {
       toast('Origen y destino deben ser diferentes', 'error')
       return
     }
 
     setLoading(true)
 
-    const toCard = cards.find(c => c.id === toCardId)
-    const isCreditPayment = toCard?.card_type === 'credit'
+    const toAccount = accounts.find(a => a.id === toAccountId)
+    const isCreditPayment = toAccount?.account_type === 'credit_card'
 
-    const result = await addTransaction({
+    const result = await addTransfer({
+      fromAccountId,
+      toAccountId,
       amount: numAmount,
-      description: description || (isCreditPayment ? 'Pago a tarjeta de crédito' : 'Traspaso entre cuentas'),
-      category: isCreditPayment ? 'pago_credito' : 'traspaso',
-      type: 'expense',
-      card_id: fromCardId,
+      description: description || (isCreditPayment ? 'Pago a tarjeta de credito' : 'Traspaso entre cuentas'),
       date,
-      is_recurring: false,
-      installment_months: null,
-      installment_current: null,
-      notes: null,
-      is_transfer: true,
-      transfer_from_card_id: fromCardId,
-      transfer_to_card_id: toCardId,
-      currency: 'MXN',
-      exchange_rate: null,
+      categorySlug: isCreditPayment ? 'pago_credito' : 'traspaso',
     })
 
     setLoading(false)
@@ -91,11 +83,11 @@ export function TransferForm({ onSuccess }: TransferFormProps) {
     onSuccess?.()
   }
 
-  const grouped: Record<string, Card[]> = {}
-  for (const card of cards) {
-    const type = TYPE_LABELS[card.card_type] ?? card.card_type
+  const grouped: Record<string, Account[]> = {}
+  for (const account of accounts) {
+    const type = TYPE_LABELS[account.account_type] ?? account.account_type
     if (!grouped[type]) grouped[type] = []
-    grouped[type].push(card)
+    grouped[type].push(account)
   }
 
   return (
@@ -112,7 +104,7 @@ export function TransferForm({ onSuccess }: TransferFormProps) {
 
       <Input
         id="description"
-        label="Descripción (opcional)"
+        label="Descripcion (opcional)"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Ej: Pago mensual tarjeta"
@@ -121,16 +113,16 @@ export function TransferForm({ onSuccess }: TransferFormProps) {
       <div className="space-y-1">
         <label className="block text-sm font-medium text-foreground">Cuenta de origen</label>
         <select
-          value={fromCardId}
-          onChange={(e) => setFromCardId(e.target.value)}
+          value={fromAccountId}
+          onChange={(e) => setFromAccountId(e.target.value)}
           required
           className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
         >
           <option value="">Seleccionar</option>
           {Object.entries(grouped).map(([type, items]) => (
             <optgroup key={type} label={type}>
-              {items.map((card) => (
-                <option key={card.id} value={card.id}>{cardLabel(card)}</option>
+              {items.map((acc) => (
+                <option key={acc.id} value={acc.id}>{accountLabel(acc)}</option>
               ))}
             </optgroup>
           ))}
@@ -140,25 +132,25 @@ export function TransferForm({ onSuccess }: TransferFormProps) {
       <div className="space-y-1">
         <label className="block text-sm font-medium text-foreground">Cuenta destino</label>
         <select
-          value={toCardId}
-          onChange={(e) => setToCardId(e.target.value)}
+          value={toAccountId}
+          onChange={(e) => setToAccountId(e.target.value)}
           required
           className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
         >
           <option value="">Seleccionar</option>
           {Object.entries(grouped).map(([type, items]) => (
             <optgroup key={type} label={type}>
-              {items.map((card) => (
-                <option key={card.id} value={card.id}>{cardLabel(card)}</option>
+              {items.map((acc) => (
+                <option key={acc.id} value={acc.id}>{accountLabel(acc)}</option>
               ))}
             </optgroup>
           ))}
         </select>
       </div>
 
-      {cards.find(c => c.id === toCardId)?.card_type === 'credit' && (
+      {accounts.find(a => a.id === toAccountId)?.account_type === 'credit_card' && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
-          Este traspaso se registra como pago a la deuda de la tarjeta de crédito.
+          Este traspaso se registra como pago a la deuda de la tarjeta de credito.
         </div>
       )}
 

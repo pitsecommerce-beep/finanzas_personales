@@ -7,62 +7,51 @@ import { CurrencyInput } from '@/components/ui/currency-input'
 import { Select } from '@/components/ui/select'
 import { BANKS, VOUCHER_BRANDS, INVESTMENT_PLATFORMS } from '@/lib/constants/banks'
 import { CARD_COLORS } from '@/lib/constants/colors'
-import { useCards } from '@/lib/hooks/use-cards'
+import { useAccounts } from '@/lib/data/accounts'
 import { useToast } from '@/components/ui/toast'
-import { todayMX } from '@/lib/utils/dates'
-import type { Card, CardType, YieldFrequency } from '@/types/database'
+import type { Account, AccountType, YieldCompounding, LiquidityType } from '@/types/database'
 
 interface CardFormProps {
-  card?: Card
+  card?: Account
   onSuccess?: () => void
 }
 
 export function CardForm({ card, onSuccess }: CardFormProps) {
-  const [bankName, setBankName] = useState(card?.bank_name ?? '')
+  const [institution, setInstitution] = useState(card?.institution ?? '')
   const [alias, setAlias] = useState(card?.alias ?? '')
-  const [cardType, setCardType] = useState<CardType>(card?.card_type ?? 'credit')
-  const [lastFour, setLastFour] = useState(card?.last_four_digits ?? '')
+  const [accountType, setAccountType] = useState<AccountType>(card?.account_type ?? 'credit_card')
+  const [lastFour, setLastFour] = useState(card?.last_four ?? '')
   const [cutOffDay, setCutOffDay] = useState(card?.cut_off_day?.toString() ?? '')
   const [paymentDay, setPaymentDay] = useState(card?.payment_day?.toString() ?? '')
   const [creditLimit, setCreditLimit] = useState(card?.credit_limit?.toString() ?? '')
-  const [balance, setBalance] = useState(card?.balance?.toString() ?? '')
-  const [yieldRate, setYieldRate] = useState(card?.yield_rate?.toString() ?? '')
-  const [yieldRateAbove, setYieldRateAbove] = useState(card?.yield_rate_above_limit?.toString() ?? '')
-  const [yieldFrequency, setYieldFrequency] = useState<YieldFrequency>(card?.yield_frequency ?? 'daily')
-  const [moneyAvailability, setMoneyAvailability] = useState(card?.money_availability ?? 'immediate')
+  const [openingBalance, setOpeningBalance] = useState(card?.opening_balance?.toString() ?? '0')
+  const [interestRate, setInterestRate] = useState(card?.interest_rate_annual?.toString() ?? '')
+  const [yieldCompounding, setYieldCompounding] = useState<YieldCompounding>(card?.yield_compounding ?? 'daily')
+  const [liquidity, setLiquidity] = useState<LiquidityType>(card?.liquidity ?? 'immediate')
   const [color, setColor] = useState(card?.color ?? '#14B8A6')
-  const [investmentPlatform, setInvestmentPlatform] = useState(card?.investment_platform ?? '')
-  const [investmentTicker, setInvestmentTicker] = useState(card?.investment_ticker ?? '')
-  const [investmentShares, setInvestmentShares] = useState(card?.investment_shares?.toString() ?? '')
-  const [investmentBuyPrice, setInvestmentBuyPrice] = useState(card?.investment_buy_price?.toString() ?? '')
-  const [investmentBuyDate, setInvestmentBuyDate] = useState(card?.investment_buy_date ?? todayMX())
+  const [notes, setNotes] = useState(card?.notes ?? '')
   const [loading, setLoading] = useState(false)
 
-  const { addCard, updateCard } = useCards()
+  const { addAccount, updateAccount } = useAccounts()
   const { toast } = useToast()
 
   const isEditing = !!card
 
   useEffect(() => {
     if (card) {
-      setBankName(card.bank_name)
+      setInstitution(card.institution ?? '')
       setAlias(card.alias)
-      setCardType(card.card_type)
-      setLastFour(card.last_four_digits ?? '')
+      setAccountType(card.account_type)
+      setLastFour(card.last_four ?? '')
       setCutOffDay(card.cut_off_day?.toString() ?? '')
       setPaymentDay(card.payment_day?.toString() ?? '')
       setCreditLimit(card.credit_limit?.toString() ?? '')
-      setBalance(card.balance?.toString() ?? '')
-      setYieldRate(card.yield_rate?.toString() ?? '')
-      setYieldRateAbove(card.yield_rate_above_limit?.toString() ?? '')
-      setYieldFrequency(card.yield_frequency ?? 'daily')
-      setMoneyAvailability(card.money_availability ?? 'immediate')
+      setOpeningBalance(card.opening_balance?.toString() ?? '0')
+      setInterestRate(card.interest_rate_annual?.toString() ?? '')
+      setYieldCompounding(card.yield_compounding ?? 'daily')
+      setLiquidity(card.liquidity ?? 'immediate')
       setColor(card.color)
-      setInvestmentPlatform(card.investment_platform ?? '')
-      setInvestmentTicker(card.investment_ticker ?? '')
-      setInvestmentShares(card.investment_shares?.toString() ?? '')
-      setInvestmentBuyPrice(card.investment_buy_price?.toString() ?? '')
-      setInvestmentBuyDate(card.investment_buy_date ?? todayMX())
+      setNotes(card.notes ?? '')
     }
   }, [card])
 
@@ -70,60 +59,46 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
     e.preventDefault()
     setLoading(true)
 
-    const today = todayMX()
-    const isSavings = cardType === 'savings'
-    const isInvestment = cardType === 'investment'
-    const hasBalance = cardType === 'debit' || cardType === 'cash' || isSavings || cardType === 'voucher' || isInvestment
+    const isSavings = accountType === 'savings'
+    const isInvestment = accountType === 'investment'
+    const hasOpeningBalance = accountType === 'debit' || accountType === 'cash' || isSavings || accountType === 'voucher' || isInvestment
 
-    const cardData: Record<string, unknown> = {
-      bank_name: cardType === 'cash' ? 'Efectivo' : bankName,
-      alias: cardType === 'cash' && !alias ? 'Dinero en efectivo' : alias,
-      card_type: cardType,
-      last_four_digits: (cardType === 'cash' || cardType === 'voucher') ? null : (lastFour || null),
-      cut_off_day: cardType === 'credit' ? parseInt(cutOffDay) : null,
-      payment_day: cardType === 'credit' ? parseInt(paymentDay) : null,
-      credit_limit: cardType === 'credit' && creditLimit ? parseFloat(creditLimit) : null,
-      balance: hasBalance && balance ? parseFloat(balance) : null,
+    const accountData: Record<string, unknown> = {
+      institution: accountType === 'cash' ? 'Efectivo' : (accountType === 'voucher' ? institution : institution),
+      alias: accountType === 'cash' && !alias ? 'Dinero en efectivo' : alias,
+      name: alias || 'Cuenta',
+      account_type: accountType,
+      last_four: (accountType === 'cash' || accountType === 'voucher' || accountType === 'investment') ? null : (lastFour || null),
+      cut_off_day: accountType === 'credit_card' ? parseInt(cutOffDay) : null,
+      payment_day: accountType === 'credit_card' ? parseInt(paymentDay) : null,
+      credit_limit: accountType === 'credit_card' && creditLimit ? parseFloat(creditLimit) : null,
+      opening_balance: hasOpeningBalance && openingBalance ? parseFloat(openingBalance) : 0,
       color,
+      notes: notes || null,
     }
 
     if (isSavings) {
-      cardData.has_yields = true
-      cardData.yield_rate = yieldRate ? parseFloat(yieldRate) : null
-      cardData.last_yield_date = card?.last_yield_date ?? today
-      cardData.yield_frequency = yieldFrequency
-      cardData.money_availability = moneyAvailability
-      cardData.yield_rate_above_limit = yieldRateAbove ? parseFloat(yieldRateAbove) : null
+      accountData.yields_enabled = true
+      accountData.interest_rate_annual = interestRate ? parseFloat(interestRate) : null
+      accountData.yield_compounding = yieldCompounding
+      accountData.liquidity = liquidity
     } else {
-      cardData.has_yields = false
-      cardData.yield_rate = null
-      cardData.last_yield_date = null
-      cardData.yield_frequency = null
-      cardData.money_availability = null
-      cardData.yield_rate_above_limit = null
+      accountData.yields_enabled = false
+      accountData.interest_rate_annual = null
+      accountData.yield_compounding = null
+      accountData.liquidity = null
     }
 
     if (isInvestment) {
-      cardData.investment_platform = investmentPlatform || null
-      cardData.investment_ticker = investmentTicker.toUpperCase() || null
-      cardData.investment_shares = investmentShares ? parseFloat(investmentShares) : null
-      cardData.investment_buy_price = investmentBuyPrice ? parseFloat(investmentBuyPrice) : null
-      cardData.investment_buy_date = investmentBuyDate || null
-      cardData.bank_name = investmentPlatform || 'Inversión'
-      cardData.alias = alias || `${investmentTicker.toUpperCase()} - ${investmentPlatform}`
-    } else {
-      cardData.investment_platform = null
-      cardData.investment_ticker = null
-      cardData.investment_shares = null
-      cardData.investment_buy_price = null
-      cardData.investment_buy_date = null
+      accountData.institution = institution || 'Inversion'
+      accountData.liquidity = liquidity
     }
 
     let result
     if (isEditing) {
-      result = await updateCard(card.id, cardData)
+      result = await updateAccount(card.id, accountData as Partial<Account>)
     } else {
-      result = await addCard(cardData)
+      result = await addAccount(accountData)
     }
 
     setLoading(false)
@@ -137,33 +112,31 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
     onSuccess?.()
   }
 
-  const typeOptions: { value: CardType; label: string }[] = [
-    { value: 'credit', label: 'Crédito' },
-    { value: 'debit', label: 'Débito' },
+  const typeOptions: { value: AccountType; label: string }[] = [
+    { value: 'credit_card', label: 'Credito' },
+    { value: 'debit', label: 'Debito' },
     { value: 'savings', label: 'Ahorro' },
     { value: 'cash', label: 'Efectivo' },
     { value: 'voucher', label: 'Vales' },
-    { value: 'investment', label: 'Inversión' },
+    { value: 'investment', label: 'Inversion' },
   ]
 
-  const showBank = cardType !== 'cash' && cardType !== 'voucher' && cardType !== 'investment'
-  const showDigits = cardType !== 'cash' && cardType !== 'voucher' && cardType !== 'investment'
-  const showBalance = cardType === 'debit' || cardType === 'cash' || cardType === 'savings' || cardType === 'voucher' || cardType === 'investment'
-  const balanceNum = balance ? parseFloat(balance) : 0
+  const showBank = accountType !== 'cash' && accountType !== 'voucher' && accountType !== 'investment'
+  const showDigits = accountType !== 'cash' && accountType !== 'voucher' && accountType !== 'investment'
+  const showOpeningBalance = accountType === 'debit' || accountType === 'cash' || accountType === 'savings' || accountType === 'voucher' || accountType === 'investment'
 
-  const yieldFreqOptions = [
+  const compoundingOptions = [
     { value: 'daily', label: 'Diario' },
     { value: 'monthly', label: 'Mensual' },
     { value: 'quarterly', label: 'Trimestral' },
     { value: 'annual', label: 'Anual' },
   ]
 
-  const availabilityOptions = [
+  const liquidityOptions = [
     { value: 'immediate', label: 'Inmediata' },
-    { value: '24h', label: '24 horas' },
-    { value: '48h', label: '48 horas' },
-    { value: '28_days', label: '28 días' },
-    { value: 'custom', label: 'Otra' },
+    { value: 't_plus_1', label: '24 horas' },
+    { value: 't_plus_2', label: '48 horas' },
+    { value: 'locked', label: 'Bloqueado / Plazo fijo' },
   ]
 
   return (
@@ -175,9 +148,9 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
             <button
               key={t.value}
               type="button"
-              onClick={() => setCardType(t.value)}
+              onClick={() => setAccountType(t.value)}
               className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                cardType === t.value
+                accountType === t.value
                   ? 'border-accent bg-accent/10 text-accent'
                   : 'border-border text-muted hover:border-gray-300'
               }`}
@@ -191,22 +164,34 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
       {showBank && (
         <Select
           id="bank"
-          label="Banco / Institución"
-          value={bankName}
-          onChange={(e) => setBankName(e.target.value)}
+          label="Banco / Institucion"
+          value={institution}
+          onChange={(e) => setInstitution(e.target.value)}
           options={BANKS.map((b) => ({ value: b, label: b }))}
           placeholder="Selecciona"
           required
         />
       )}
 
-      {cardType === 'voucher' && (
+      {accountType === 'voucher' && (
         <Select
           id="voucherBrand"
           label="Marca de vales"
-          value={bankName}
-          onChange={(e) => setBankName(e.target.value)}
+          value={institution}
+          onChange={(e) => setInstitution(e.target.value)}
           options={VOUCHER_BRANDS.map((b) => ({ value: b, label: b }))}
+          placeholder="Selecciona"
+          required
+        />
+      )}
+
+      {accountType === 'investment' && (
+        <Select
+          id="investPlatform"
+          label="Plataforma"
+          value={institution}
+          onChange={(e) => setInstitution(e.target.value)}
+          options={INVESTMENT_PLATFORMS.map((p) => ({ value: p, label: p }))}
           placeholder="Selecciona"
           required
         />
@@ -218,18 +203,19 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
         value={alias}
         onChange={(e) => setAlias(e.target.value)}
         placeholder={
-          cardType === 'cash' ? 'Ej: Mi cartera' :
-          cardType === 'voucher' ? 'Ej: Vales trabajo' :
-          cardType === 'savings' ? 'Ej: Cuenta Nu ahorro' :
+          accountType === 'cash' ? 'Ej: Mi cartera' :
+          accountType === 'voucher' ? 'Ej: Vales trabajo' :
+          accountType === 'savings' ? 'Ej: Cuenta Nu ahorro' :
+          accountType === 'investment' ? 'Ej: NAFTRAC - GBM' :
           'Ej: Mi Oro BBVA'
         }
-        required={cardType !== 'cash'}
+        required={accountType !== 'cash'}
       />
 
       {showDigits && (
         <Input
           id="lastFour"
-          label="Últimos 4 dígitos"
+          label="Ultimos 4 digitos"
           value={lastFour}
           onChange={(e) => setLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))}
           placeholder="1234"
@@ -237,12 +223,12 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
         />
       )}
 
-      {cardType === 'credit' && (
+      {accountType === 'credit_card' && (
         <>
           <div className="grid grid-cols-2 gap-3">
             <Input
               id="cutOff"
-              label="Día de corte"
+              label="Dia de corte"
               type="number"
               min="1"
               max="31"
@@ -253,7 +239,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
             />
             <Input
               id="paymentDay"
-              label="Día de pago"
+              label="Dia de pago"
               type="number"
               min="1"
               max="31"
@@ -265,7 +251,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
           </div>
           <CurrencyInput
             id="creditLimit"
-            label="Límite de crédito"
+            label="Limite de credito"
             value={creditLimit}
             onChange={setCreditLimit}
             placeholder="50,000"
@@ -273,121 +259,66 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
         </>
       )}
 
-      {showBalance && (
+      {showOpeningBalance && (
         <CurrencyInput
-          id="balance"
-          label="Saldo actual"
-          value={balance}
-          onChange={setBalance}
+          id="openingBalance"
+          label="Saldo inicial"
+          value={openingBalance}
+          onChange={setOpeningBalance}
           placeholder="0.00"
         />
       )}
 
-      {cardType === 'savings' && (
+      {accountType === 'savings' && (
         <>
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              id="yieldRate"
-              label="Tasa anual (%) hasta $25,000"
-              type="number"
-              step="0.001"
-              min="0"
-              max="100"
-              value={yieldRate}
-              onChange={(e) => setYieldRate(e.target.value)}
-              placeholder="Ej: 15.0"
-              required
-            />
-            <Input
-              id="yieldRateAbove"
-              label="Tasa anual (%) arriba de $25,000"
-              type="number"
-              step="0.001"
-              min="0"
-              max="100"
-              value={yieldRateAbove}
-              onChange={(e) => setYieldRateAbove(e.target.value)}
-              placeholder="Ej: 4.0"
-            />
-          </div>
+          <Input
+            id="interestRate"
+            label="Tasa anual (%)"
+            type="number"
+            step="0.001"
+            min="0"
+            max="100"
+            value={interestRate}
+            onChange={(e) => setInterestRate(e.target.value)}
+            placeholder="Ej: 15.0"
+            required
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <Select
-              id="yieldFreq"
+              id="yieldCompounding"
               label="Frecuencia de rendimiento"
-              value={yieldFrequency}
-              onChange={(e) => setYieldFrequency(e.target.value as YieldFrequency)}
-              options={yieldFreqOptions}
+              value={yieldCompounding}
+              onChange={(e) => setYieldCompounding(e.target.value as YieldCompounding)}
+              options={compoundingOptions}
             />
             <Select
-              id="availability"
+              id="liquidity"
               label="Disponibilidad del dinero"
-              value={moneyAvailability}
-              onChange={(e) => setMoneyAvailability(e.target.value)}
-              options={availabilityOptions}
+              value={liquidity}
+              onChange={(e) => setLiquidity(e.target.value as LiquidityType)}
+              options={liquidityOptions}
             />
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
-            Regulación mexicana: los rendimientos garantizados aplican hasta $25,000 MXN. El excedente genera una tasa menor.
           </div>
         </>
       )}
 
-      {cardType === 'investment' && (
+      {accountType === 'investment' && (
         <>
           <Select
-            id="investPlatform"
-            label="Plataforma"
-            value={investmentPlatform}
-            onChange={(e) => setInvestmentPlatform(e.target.value)}
-            options={INVESTMENT_PLATFORMS.map((p) => ({ value: p, label: p }))}
-            placeholder="Selecciona"
-            required
+            id="liquidity"
+            label="Disponibilidad del dinero"
+            value={liquidity}
+            onChange={(e) => setLiquidity(e.target.value as LiquidityType)}
+            options={liquidityOptions}
           />
-
           <Input
-            id="investTicker"
-            label="Ticker / Símbolo"
-            value={investmentTicker}
-            onChange={(e) => setInvestmentTicker(e.target.value.toUpperCase())}
-            placeholder="Ej: AAPL, BTC-USD, NAFTRAC"
-            required
+            id="notes"
+            label="Notas (ticker, titulos, etc.)"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Ej: NAFTRAC 10 titulos a $52.30"
           />
-
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              id="investShares"
-              label="Cantidad de títulos"
-              type="number"
-              step="0.000001"
-              min="0"
-              value={investmentShares}
-              onChange={(e) => setInvestmentShares(e.target.value)}
-              placeholder="Ej: 10"
-              required
-            />
-            <CurrencyInput
-              id="investBuyPrice"
-              label="Precio de compra (unit.)"
-              value={investmentBuyPrice}
-              onChange={setInvestmentBuyPrice}
-              placeholder="150.00"
-            />
-          </div>
-
-          <Input
-            id="investBuyDate"
-            label="Fecha de compra"
-            type="date"
-            value={investmentBuyDate}
-            onChange={(e) => setInvestmentBuyDate(e.target.value)}
-            required
-          />
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
-            Se consultará el precio actual del ticker para calcular tus ganancias o pérdidas.
-          </div>
         </>
       )}
 

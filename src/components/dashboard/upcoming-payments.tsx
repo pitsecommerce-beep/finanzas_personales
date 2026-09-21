@@ -1,12 +1,12 @@
 'use client'
 
-import type { Card } from '@/types/database'
+import type { Account } from '@/types/database'
 import { getNextPaymentDate, daysUntil } from '@/lib/utils/dates'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 interface UpcomingPaymentsProps {
-  cards: Card[]
+  accounts: Account[]
 }
 
 function CardIcon({ color }: { color: string }) {
@@ -28,17 +28,17 @@ function CardIcon({ color }: { color: string }) {
   )
 }
 
-export function UpcomingPayments({ cards }: UpcomingPaymentsProps) {
-  if (cards.length === 0) {
+export function UpcomingPayments({ accounts }: UpcomingPaymentsProps) {
+  if (accounts.length === 0) {
     return null
   }
 
-  const upcoming = cards
-    .filter((card) => card.payment_day != null)
-    .map((card) => {
-      const paymentDate = getNextPaymentDate(card.payment_day!)
+  const upcoming = accounts
+    .filter((a) => a.payment_day != null)
+    .map((a) => {
+      const paymentDate = getNextPaymentDate(a.payment_day!)
       const days = daysUntil(paymentDate)
-      return { card, paymentDate, days }
+      return { account: a, paymentDate, days }
     })
     .sort((a, b) => a.days - b.days)
 
@@ -46,13 +46,13 @@ export function UpcomingPayments({ cards }: UpcomingPaymentsProps) {
 
   return (
     <div className="bg-white rounded-xl border border-border p-4">
-      <h3 className="font-semibold text-sm mb-3">Próximos pagos</h3>
+      <h3 className="font-semibold text-sm mb-3">Proximos pagos</h3>
       <div className="space-y-3">
-        {upcoming.map(({ card, paymentDate, days }) => (
-          <div key={card.id} className="flex items-center gap-3">
-            <CardIcon color={card.color} />
+        {upcoming.map(({ account, paymentDate, days }) => (
+          <div key={account.id} className="flex items-center gap-3">
+            <CardIcon color={account.color} />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{card.alias}</p>
+              <p className="text-sm font-medium truncate">{account.alias}</p>
               <p className="text-xs text-muted">
                 {format(paymentDate, "d 'de' MMMM", { locale: es })}
               </p>
@@ -66,7 +66,7 @@ export function UpcomingPayments({ cards }: UpcomingPaymentsProps) {
                   : 'bg-accent/10 text-accent'
               }`}
             >
-              {days === 0 ? 'Hoy' : days === 1 ? 'Mañana' : `${days} días`}
+              {days === 0 ? 'Hoy' : days === 1 ? 'Manana' : `${days} dias`}
             </span>
           </div>
         ))}

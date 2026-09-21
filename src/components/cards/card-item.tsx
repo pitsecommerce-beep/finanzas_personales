@@ -1,23 +1,24 @@
 'use client'
 
-import type { Card } from '@/types/database'
+import type { Account, AccountBalance } from '@/types/database'
 import { CreditCard, Wallet, Banknote, Trash2, Pencil, PiggyBank, Ticket, TrendingUp, Eye } from 'lucide-react'
 import { formatMXN } from '@/lib/utils/currency'
 
 interface CardItemProps {
-  card: Card
-  onEdit?: (card: Card) => void
+  card: Account
+  balance?: AccountBalance
+  onEdit?: (card: Account) => void
   onDelete?: (id: string) => void
-  onView?: (card: Card) => void
+  onView?: (card: Account) => void
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  credit: 'Crédito',
-  debit: 'Débito',
+  credit_card: 'Credito',
+  debit: 'Debito',
   cash: 'Efectivo',
   savings: 'Ahorro',
   voucher: 'Vales',
-  investment: 'Inversión',
+  investment: 'Inversion',
 }
 
 function getIcon(type: string) {
@@ -31,8 +32,8 @@ function getIcon(type: string) {
   }
 }
 
-export function CardItem({ card, onEdit, onDelete, onView }: CardItemProps) {
-  const Icon = getIcon(card.card_type)
+export function CardItem({ card, balance, onEdit, onDelete, onView }: CardItemProps) {
+  const Icon = getIcon(card.account_type)
   const isLight = card.color === '#F5F0E8'
   const textClass = isLight ? 'text-gray-800' : 'text-white'
   const subtextClass = isLight ? 'text-gray-500' : 'text-white/60'
@@ -42,6 +43,8 @@ export function CardItem({ card, onEdit, onDelete, onView }: CardItemProps) {
   const iconClass = isLight ? 'text-gray-400' : 'text-white/40'
   const btnClass = isLight ? 'text-gray-400 hover:text-gray-700' : 'text-white/60 hover:text-white'
   const badgeBg = isLight ? 'bg-black/10' : 'bg-white/20'
+
+  const currentBalance = balance?.current_balance ?? null
 
   return (
     <div
@@ -55,12 +58,12 @@ export function CardItem({ card, onEdit, onDelete, onView }: CardItemProps) {
 
       <div className="flex justify-between items-start relative">
         <div>
-          <p className={`text-xs ${subtextClass}`}>{card.bank_name}</p>
+          <p className={`text-xs ${subtextClass}`}>{card.institution}</p>
           <p className="font-semibold text-lg">{card.alias}</p>
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-[10px] ${badgeBg} px-2 py-0.5 rounded-full uppercase font-medium`}>
-            {TYPE_LABELS[card.card_type] ?? card.card_type}
+            {TYPE_LABELS[card.account_type] ?? card.account_type}
           </span>
           {onView && (
             <button onClick={(e) => { e.stopPropagation(); onView(card) }} className={`${btnClass} p-1`} title="Ver movimientos">
@@ -81,11 +84,11 @@ export function CardItem({ card, onEdit, onDelete, onView }: CardItemProps) {
       </div>
 
       <div className="relative">
-        {(card.card_type === 'cash' || card.card_type === 'voucher' || card.card_type === 'investment') ? (
+        {(card.account_type === 'cash' || card.account_type === 'voucher' || card.account_type === 'investment') ? (
           <div />
         ) : (
           <p className={`text-lg tracking-widest font-mono ${dotClass}`}>
-            &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; {card.last_four_digits ?? '&&bull;&bull;&bull;&bull;'}
+            &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; {card.last_four ?? '&&bull;&bull;&bull;&bull;'}
           </p>
         )}
       </div>
@@ -95,43 +98,31 @@ export function CardItem({ card, onEdit, onDelete, onView }: CardItemProps) {
           {card.cut_off_day != null && (
             <div>
               <p className={subtextClass}>Corte</p>
-              <p className="font-medium">Día {card.cut_off_day}</p>
+              <p className="font-medium">Dia {card.cut_off_day}</p>
             </div>
           )}
           {card.payment_day != null && (
             <div>
               <p className={subtextClass}>Pago</p>
-              <p className="font-medium">Día {card.payment_day}</p>
+              <p className="font-medium">Dia {card.payment_day}</p>
             </div>
           )}
-          {card.balance != null && (
+          {currentBalance != null && (
             <div>
               <p className={subtextClass}>Saldo</p>
-              <p className="font-medium">{formatMXN(card.balance)}</p>
+              <p className="font-medium">{formatMXN(currentBalance)}</p>
             </div>
           )}
-          {card.credit_limit != null && card.card_type === 'credit' && (
+          {card.credit_limit != null && card.account_type === 'credit_card' && currentBalance != null && (
             <div>
               <p className={subtextClass}>Disponible</p>
-              <p className="font-medium">{formatMXN(card.credit_limit - (card.used_credit ?? 0))}</p>
+              <p className="font-medium">{formatMXN(card.credit_limit + currentBalance)}</p>
             </div>
           )}
-          {card.has_yields && card.yield_rate != null && (
+          {card.yields_enabled && card.interest_rate_annual != null && (
             <div>
               <p className={subtextClass}>Rendimiento</p>
-              <p className="font-medium">{card.yield_rate}% anual</p>
-            </div>
-          )}
-          {card.card_type === 'investment' && card.investment_ticker && (
-            <div>
-              <p className={subtextClass}>Ticker</p>
-              <p className="font-medium">{card.investment_ticker}</p>
-            </div>
-          )}
-          {card.card_type === 'investment' && card.investment_shares != null && (
-            <div>
-              <p className={subtextClass}>Acciones</p>
-              <p className="font-medium">{card.investment_shares}</p>
+              <p className="font-medium">{card.interest_rate_annual}% anual</p>
             </div>
           )}
         </div>

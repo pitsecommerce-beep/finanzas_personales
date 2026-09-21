@@ -2,19 +2,20 @@
 
 import { useState } from 'react'
 import { Plus, CheckSquare, X, Trash2 } from 'lucide-react'
-import { useTransactions } from '@/lib/hooks/use-transactions'
+import { useLedger } from '@/lib/data/ledger'
 import { TransactionList } from '@/components/transactions/transaction-list'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import { Modal } from '@/components/ui/modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
-import type { Transaction } from '@/types/database'
+import type { LedgerEntry } from '@/types/database'
 
 export default function GastosPage() {
-  const { transactions, loading, deleteTransaction, deleteTransactions, refetch } = useTransactions({ type: 'expense', isTransfer: false })
+  const { entries, loading, softDeleteEntry, softDeleteEntries, refetch } = useLedger()
+  const expenses = entries.filter(e => e.entry_type === 'expense')
   const [showForm, setShowForm] = useState(false)
-  const [editingTx, setEditingTx] = useState<Transaction | null>(null)
+  const [editingTx, setEditingTx] = useState<LedgerEntry | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [selectable, setSelectable] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -23,7 +24,7 @@ export default function GastosPage() {
 
   async function confirmDelete() {
     if (!deleteId) return
-    const { error } = await deleteTransaction(deleteId)
+    const { error } = await softDeleteEntry(deleteId)
     if (error) toast('Error al eliminar', 'error')
     else toast('Gasto eliminado', 'success')
     setDeleteId(null)
@@ -31,7 +32,7 @@ export default function GastosPage() {
 
   async function confirmBulkDelete() {
     const ids = Array.from(selectedIds)
-    const { error } = await deleteTransactions(ids)
+    const { error } = await softDeleteEntries(ids)
     if (error) toast('Error al eliminar', 'error')
     else toast(`${ids.length} gastos eliminados`, 'success')
     setShowBulkDelete(false)
@@ -40,7 +41,7 @@ export default function GastosPage() {
   }
 
   function selectAll() {
-    setSelectedIds(new Set(transactions.map(t => t.id)))
+    setSelectedIds(new Set(expenses.map(e => e.id)))
   }
 
   function cancelSelection() {
@@ -61,12 +62,12 @@ export default function GastosPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Gastos</h1>
-          <p className="text-sm text-muted">{transactions.length} gastos registrados</p>
+          <p className="text-sm text-muted">{expenses.length} gastos registrados</p>
         </div>
         <div className="flex gap-2">
           {!selectable ? (
             <>
-              {transactions.length > 0 && (
+              {expenses.length > 0 && (
                 <Button variant="outline" size="sm" onClick={() => setSelectable(true)}>
                   <CheckSquare size={14} /> Seleccionar
                 </Button>
@@ -78,7 +79,7 @@ export default function GastosPage() {
           ) : (
             <>
               <Button variant="outline" size="sm" onClick={selectAll}>
-                Todos ({transactions.length})
+                Todos ({expenses.length})
               </Button>
               <Button variant="outline" size="sm" onClick={cancelSelection}>
                 <X size={14} /> Cancelar
@@ -94,8 +95,8 @@ export default function GastosPage() {
       </div>
 
       <TransactionList
-        transactions={transactions}
-        onEdit={selectable ? undefined : (tx) => setEditingTx(tx)}
+        entries={expenses}
+        onEdit={selectable ? undefined : (e) => setEditingTx(e)}
         onDelete={selectable ? undefined : (id) => setDeleteId(id)}
         selectable={selectable}
         selectedIds={selectedIds}
@@ -115,7 +116,7 @@ export default function GastosPage() {
       <ConfirmDialog
         open={!!deleteId}
         title="Eliminar gasto"
-        message="Esta accion no se puede deshacer. ¿Deseas continuar?"
+        message="Esta accion no se puede deshacer. Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}

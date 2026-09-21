@@ -2,20 +2,20 @@
 
 import { formatMXN } from '@/lib/utils/currency'
 import { ArrowDownCircle, ArrowUpCircle, Wallet, Landmark } from 'lucide-react'
-import type { Card } from '@/types/database'
+import type { AccountBalance } from '@/types/database'
 
 interface SummaryCardsProps {
   income: number
   expenses: number
-  cards?: Card[]
+  balances?: AccountBalance[]
 }
 
-export function SummaryCards({ income, expenses, cards = [] }: SummaryCardsProps) {
+export function SummaryCards({ income, expenses, balances = [] }: SummaryCardsProps) {
   const balance = income - expenses
 
-  const liquidity = cards
-    .filter((c) => c.card_type === 'debit' || c.card_type === 'cash' || c.card_type === 'savings' || c.card_type === 'voucher')
-    .reduce((sum, c) => sum + (c.balance ?? 0), 0)
+  const liquidity = balances
+    .filter((b) => b.account_type === 'debit' || b.account_type === 'cash' || b.account_type === 'savings' || b.account_type === 'voucher')
+    .reduce((sum, b) => sum + (b.current_balance ?? 0), 0)
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
