@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, subMonths, addDays, addMonths, isBefore, isAfter } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { clampDay, toNextBusinessDay } from '@/lib/utils/dates'
 import type { Account, RecurringRule, Debt } from '@/types/database'
 
 export default function CalendarioPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [incomeRules, setIncomeRules] = useState<RecurringRule[]>([])
   const [debts, setDebts] = useState<Debt[]>([])
@@ -135,13 +136,16 @@ export default function CalendarioPage() {
           {days.map((day) => {
             const events = getEventsForDay(day)
             const isToday = isSameDay(day, new Date())
+            const isSelected = selectedDay ? isSameDay(day, selectedDay) : false
 
             return (
-              <div
+              <button
+                type="button"
                 key={day.toISOString()}
-                className={`min-h-[60px] p-1 border border-border/50 rounded ${
-                  isToday ? 'bg-accent/5' : ''
-                }`}
+                onClick={() => setSelectedDay(day)}
+                className={`min-h-[60px] p-1 border rounded text-left transition-colors ${
+                  isSelected ? 'border-accent bg-accent/10' : 'border-border/50 hover:border-accent/50'
+                } ${isToday && !isSelected ? 'bg-accent/5' : ''}`}
               >
                 <span className={`text-xs ${isToday ? 'bg-accent text-white px-1.5 py-0.5 rounded-full' : 'text-muted'}`}>
                   {day.getDate()}
@@ -160,11 +164,48 @@ export default function CalendarioPage() {
                     <p className="text-[9px] text-muted text-center">+{events.length - 2}</p>
                   )}
                 </div>
-              </div>
+              </button>
             )
           })}
         </div>
       </div>
+
+      {selectedDay && (() => {
+        const dayEvents = getEventsForDay(selectedDay)
+        return (
+          <div className="bg-white rounded-xl border border-border overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-accent/5">
+              <h3 className="font-semibold text-sm capitalize">
+                {format(selectedDay, "EEEE d 'de' MMMM", { locale: es })}
+              </h3>
+              <button onClick={() => setSelectedDay(null)} className="text-muted hover:text-foreground p-1">
+                <X size={16} />
+              </button>
+            </div>
+            {dayEvents.length === 0 ? (
+              <p className="text-sm text-muted p-4 text-center">Sin eventos para este dia</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {dayEvents.map((ev, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: ev.color }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{ev.label}</p>
+                      <p className="text-xs text-muted capitalize">
+                        {ev.type === 'cutoff' ? 'Fecha de corte'
+                          : ev.type === 'payment' ? 'Fecha de pago'
+                          : ev.type === 'income' ? 'Ingreso recurrente'
+                          : ev.type === 'debt' ? 'Cuenta por cobrar/pagar'
+                          : ev.type}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       <div className="flex flex-wrap gap-4 text-xs text-muted">
         <div className="flex items-center gap-1">
