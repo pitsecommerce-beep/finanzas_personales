@@ -362,6 +362,14 @@ function SingleMonthView({ data }: { data: MonthData }) {
         </div>
       </div>
 
+      <div className="rounded-xl border p-4 bg-accent/5 border-accent/20">
+        <div className="flex items-center justify-between">
+          <span className="font-semibold text-accent">Flujo de caja</span>
+          <span className={`text-2xl font-bold ${net >= 0 ? 'text-accent' : 'text-danger'}`}>{formatMXN(net)}</span>
+        </div>
+        <p className="text-xs text-muted mt-1">Efectivo acumulado al final del mes</p>
+      </div>
+
       {data.accountProjections.length > 0 && (
         <div className="bg-white rounded-xl border border-border overflow-hidden">
           <div className="bg-accent/5 px-4 py-3 border-b border-border">
@@ -541,6 +549,23 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
               </td>
             ))}
           </tr>
+
+          {(() => {
+            let cumulative = 0
+            return (
+              <tr className="border-t border-border bg-accent/5">
+                <td className="px-4 py-3 font-bold sticky left-0 bg-accent/5 text-accent">Flujo de caja</td>
+                {monthsData.map((md, i) => {
+                  cumulative += md.data.net
+                  return (
+                    <td key={i} className={`text-right px-4 py-3 font-bold ${cumulative >= 0 ? 'text-accent' : 'text-danger'}`}>
+                      {formatMXN(cumulative)}
+                    </td>
+                  )
+                })}
+              </tr>
+            )
+          })()}
 
           {allAccounts.length > 0 && (
             <>

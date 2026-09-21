@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/toast'
 import { formatMXN } from '@/lib/utils/currency'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { todayMX } from '@/lib/utils/dates'
 import type { Debt, DebtType } from '@/types/database'
 
 export default function CuentasPage() {
@@ -33,7 +34,7 @@ export default function CuentasPage() {
     person_name: '',
     description: '',
     amount: '',
-    due_date: '',
+    due_date: todayMX(),
     is_paid: false,
   }
 
