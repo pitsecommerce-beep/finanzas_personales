@@ -729,7 +729,22 @@ ALTER INDEX idx_accounts_v2_user RENAME TO idx_accounts_user_v2;
 ALTER INDEX idx_accounts_v2_type RENAME TO idx_accounts_type;
 
 -- ──────────────────────────────────────────────────────────────
--- 23. Verification queries (informational, wrapped in DO block)
+-- 23. Re-point savings_goals FKs from cards_legacy to accounts
+-- ──────────────────────────────────────────────────────────────
+
+ALTER TABLE savings_goals DROP CONSTRAINT IF EXISTS savings_goals_card_id_fkey;
+ALTER TABLE savings_goals DROP CONSTRAINT IF EXISTS savings_goals_source_card_id_fkey;
+
+ALTER TABLE savings_goals
+  ADD CONSTRAINT savings_goals_card_id_fkey
+    FOREIGN KEY (card_id) REFERENCES accounts(id) ON DELETE SET NULL;
+
+ALTER TABLE savings_goals
+  ADD CONSTRAINT savings_goals_source_card_id_fkey
+    FOREIGN KEY (source_card_id) REFERENCES accounts(id) ON DELETE SET NULL;
+
+-- ──────────────────────────────────────────────────────────────
+-- 24. Verification queries (informational, wrapped in DO block)
 -- ──────────────────────────────────────────────────────────────
 
 DO $$
