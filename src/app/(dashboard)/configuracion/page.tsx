@@ -50,8 +50,8 @@ export default function ConfiguracionPage() {
         if (!user) { setLoadingData(false); return }
 
         const [profileRes, aiRes] = await Promise.all([
-          supabase.from('profiles').select('*').eq('user_id', user.id).single(),
-          supabase.from('ai_config').select('*').eq('user_id', user.id).single(),
+          supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle(),
+          supabase.from('ai_config').select('*').eq('user_id', user.id).maybeSingle(),
         ])
 
         if (profileRes.data) {
