@@ -176,7 +176,7 @@ export default function IngresosPage() {
 
       <Modal open={!!editingTx} onClose={() => setEditingTx(null)} title="Editar ingreso">
         {editingTx && (
-          <TransactionForm type="income" transaction={editingTx} onSuccess={() => { setEditingTx(null); refetchEntries() }} />
+          <TransactionForm type="income" entry={editingTx} onSuccess={() => { setEditingTx(null); refetchEntries() }} />
         )}
       </Modal>
 
