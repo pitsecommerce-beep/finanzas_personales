@@ -14,8 +14,11 @@ const links = [
   { href: '/ingresos', label: 'Ingresos' },
   { href: '/gastos-fijos', label: 'Gastos fijos' },
   { href: '/cuentas', label: 'Cuentas' },
+  { href: '/ahorro', label: 'Ahorro' },
   { href: '/reportes', label: 'Reportes' },
+  { href: '/pyl', label: 'P&L' },
   { href: '/asesor', label: 'Asesor IA' },
+  { href: '/calendario', label: 'Calendario' },
   { href: '/configuracion', label: 'Configuración' },
 ]
 
