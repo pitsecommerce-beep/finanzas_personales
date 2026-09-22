@@ -42,12 +42,6 @@ function getMonthColumns(period: Period): Date[] {
   return months
 }
 
-function fmtShort(n: number): string {
-  if (Math.abs(n) >= 1000000) return `$${(n / 1000000).toFixed(1)}M`
-  if (Math.abs(n) >= 1000) return `$${(n / 1000).toFixed(1)}k`
-  return formatMXN(n)
-}
-
 interface MonthData {
   fixedIncome: { description: string; amount: number }[]
   sporadicIncome: { category: string; amount: number }[]
@@ -585,7 +579,7 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
                       const val = ap?.projected ?? 0
                       return (
                         <td key={i} className={`text-right px-4 py-2 text-sm font-medium ${val >= 0 ? 'text-accent' : 'text-danger'}`}>
-                          {fmtShort(val)}
+                          {formatMXN(val)}
                         </td>
                       )
                     })}
@@ -623,7 +617,7 @@ function DataRow({ label, values, color, now, months }: {
         <td key={i} className={`text-right px-4 py-2 text-sm ${v > 0 ? textColor : 'text-muted'} ${
           isSameMonth(months[i], now) ? 'font-medium' : ''
         }`}>
-          {v > 0 ? fmtShort(v) : '-'}
+          {v > 0 ? formatMXN(v) : '-'}
         </td>
       ))}
     </tr>
