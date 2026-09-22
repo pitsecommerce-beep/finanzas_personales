@@ -87,6 +87,14 @@ export function getRemainingMonths(startDate: string, totalMonths: number): numb
   return Math.max(0, totalMonths - monthsElapsed)
 }
 
+export function getClosedBillingPeriod(cutOffDay: number): { start: Date; end: Date } {
+  const currentPeriod = getBillingPeriod(cutOffDay)
+  const closedEnd = new Date(currentPeriod.start.getTime() - 86400000)
+  const prevCutOff = clampDay(cutOffDay, subMonths(closedEnd, 1))
+  const closedStart = new Date(prevCutOff.getTime() + 86400000)
+  return { start: closedStart, end: closedEnd }
+}
+
 export function isInBillingPeriod(transactionDate: string, cutOffDay: number): boolean {
   const date = startOfDay(new Date(transactionDate))
   const period = getBillingPeriod(cutOffDay)
