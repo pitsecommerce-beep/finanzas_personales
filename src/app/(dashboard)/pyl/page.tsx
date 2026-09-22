@@ -62,10 +62,10 @@ interface MonthData {
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
-  nomina: 'Nomina', freelance: 'Freelance', rendimientos: 'Rendimientos',
+  nomina: 'Nómina', freelance: 'Freelance', rendimientos: 'Rendimientos',
   renta: 'Renta', venta: 'Venta', regalo: 'Regalo', otros_ingresos: 'Otros ingresos',
   comida: 'Comida', transporte: 'Transporte', entretenimiento: 'Entretenimiento',
-  salud: 'Salud', educacion: 'Educacion', ropa: 'Ropa', servicios: 'Servicios',
+  salud: 'Salud', educacion: 'Educación', ropa: 'Ropa', servicios: 'Servicios',
   hogar: 'Hogar', mascotas: 'Mascotas', viajes: 'Viajes', suscripciones: 'Suscripciones',
   otros: 'Otros',
 }
@@ -294,7 +294,7 @@ export default function PylPage() {
             {([
               { value: 'month' as Period, label: 'Mes' },
               { value: 'semester' as Period, label: 'Semestre' },
-              { value: 'year' as Period, label: 'Ano' },
+              { value: 'year' as Period, label: 'Año' },
             ]).map((p) => (
               <button
                 key={p.value}
@@ -349,10 +349,10 @@ function SingleMonthView({ data }: { data: MonthData }) {
       </div>
 
       <Section title="Ingresos fijos" color="success" items={data.fixedIncome.map(r => ({ label: r.description, amount: r.amount }))} />
-      <Section title="Ingresos esporadicos" color="success" items={data.sporadicIncome.map(r => ({ label: r.category, amount: r.amount }))} emptyText="Sin ingresos esporadicos" />
+      <Section title="Ingresos esporádicos" color="success" items={data.sporadicIncome.map(r => ({ label: r.category, amount: r.amount }))} emptyText="Sin ingresos esporádicos" />
       <Section title="Cuentas por cobrar" color="success" items={data.receivables.map(r => ({ label: r.person, amount: r.amount }))} emptyText="Sin cuentas por cobrar" />
       <Section title="Gastos fijos" color="danger" items={data.fixedExpenses.map(r => ({ label: r.description, amount: r.amount }))} />
-      <Section title="Gastos esporadicos" color="danger" items={data.sporadicExpenses.map(r => ({ label: r.description, amount: r.amount }))} emptyText="Sin gastos esporadicos" />
+      <Section title="Gastos esporádicos" color="danger" items={data.sporadicExpenses.map(r => ({ label: r.description, amount: r.amount }))} emptyText="Sin gastos esporádicos" />
       <Section title="Cuentas por pagar" color="danger" items={data.payables.map(r => ({ label: r.person, amount: r.amount }))} emptyText="Sin cuentas por pagar" />
 
       <div className={`rounded-xl border p-4 ${net >= 0 ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}>
@@ -373,7 +373,7 @@ function SingleMonthView({ data }: { data: MonthData }) {
       {data.accountProjections.length > 0 && (
         <div className="bg-white rounded-xl border border-border overflow-hidden">
           <div className="bg-accent/5 px-4 py-3 border-b border-border">
-            <h3 className="font-semibold text-sm text-accent">Proyeccion por cuenta a fin de mes</h3>
+            <h3 className="font-semibold text-sm text-accent">Proyección por cuenta a fin de mes</h3>
           </div>
           <div className="divide-y divide-border">
             {data.accountProjections.map(ap => (
@@ -473,7 +473,7 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
 
           {allSporadicIncome.length > 0 && (
             <>
-              <GroupHeader label="Ingresos esporadicos" color="success" colSpan={monthsData.length + 1} />
+              <GroupHeader label="Ingresos esporádicos" color="success" colSpan={monthsData.length + 1} />
               {allSporadicIncome.map(cat => (
                 <DataRow key={cat} label={cat} values={monthsData.map(md =>
                   md.data.sporadicIncome.find(r => r.category === cat)?.amount ?? 0
@@ -513,7 +513,7 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
 
           {sporadicExpenseCategories.length > 0 && (
             <>
-              <GroupHeader label="Gastos esporadicos" color="danger" colSpan={monthsData.length + 1} />
+              <GroupHeader label="Gastos esporádicos" color="danger" colSpan={monthsData.length + 1} />
               {sporadicExpenseCategories.map(cat => (
                 <DataRow key={cat} label={cat} values={monthsData.map(md =>
                   md.data.sporadicExpenses.filter(r => r.category === cat).reduce((s, r) => s + r.amount, 0)
@@ -569,7 +569,7 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
 
           {allAccounts.length > 0 && (
             <>
-              <GroupHeader label="Proyeccion por cuenta" color="accent" colSpan={monthsData.length + 1} />
+              <GroupHeader label="Proyección por cuenta" color="accent" colSpan={monthsData.length + 1} />
               {allAccounts.map(accountId => {
                 const account = accountMap[accountId]
                 return (

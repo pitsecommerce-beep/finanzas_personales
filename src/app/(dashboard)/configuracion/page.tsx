@@ -158,9 +158,9 @@ export default function ConfiguracionPage() {
       })
       const data = await res.json()
       if (res.ok) {
-        toast('Conexion exitosa. Revisa tus gastos para ver la prueba.', 'success')
+        toast('Conexión exitosa. Revisa tus gastos para ver la prueba.', 'success')
       } else {
-        toast(data.error || 'Error de conexion', 'error')
+        toast(data.error || 'Error de conexión', 'error')
       }
     } catch {
       toast('No se pudo conectar al servidor', 'error')
@@ -334,7 +334,7 @@ export default function ConfiguracionPage() {
                     onClick={() => setShortcutsTab('auto')}
                     className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${shortcutsTab === 'auto' ? 'bg-accent text-white' : 'bg-gray-50 text-muted hover:text-foreground'}`}
                   >
-                    Automatico (Apple Pay)
+                    Automático (Apple Pay)
                   </button>
                 </div>
 
@@ -345,13 +345,13 @@ export default function ConfiguracionPage() {
                     </div>
 
                     <StepCard number="1" title="Crear un atajo nuevo">
-                      <p>Abre la app <strong>Atajos</strong> &gt; pestana <strong>Atajos</strong> &gt; toca <strong>+</strong> (arriba a la derecha) &gt; ponle nombre <strong>&quot;Registrar gasto&quot;</strong></p>
+                      <p>Abre la app <strong>Atajos</strong> &gt; pestaña <strong>Atajos</strong> &gt; toca <strong>+</strong> (arriba a la derecha) &gt; ponle nombre <strong>&quot;Registrar gasto&quot;</strong></p>
                     </StepCard>
 
                     <StepCard number="2" title='Agregar 2 acciones "Solicitar entrada"'>
-                      <p>Busca <strong>&quot;Solicitar entrada&quot;</strong> en la barra de busqueda de acciones y agregala <strong>dos veces</strong>:</p>
-                      <ConfigRow label="Accion 1" field="Pregunta" value='"Cuanto gastaste?"' extra='Tipo de entrada: Numero' />
-                      <ConfigRow label="Accion 2" field="Pregunta" value='"En donde compraste?"' extra='Tipo de entrada: Texto' />
+                      <p>Busca <strong>&quot;Solicitar entrada&quot;</strong> en la barra de búsqueda de acciones y agrégala <strong>dos veces</strong>:</p>
+                      <ConfigRow label="Acción 1" field="Pregunta" value='"¿Cuánto gastaste?"' extra='Tipo de entrada: Número' />
+                      <ConfigRow label="Acción 2" field="Pregunta" value='"¿En dónde compraste?"' extra='Tipo de entrada: Texto' />
                     </StepCard>
 
                     <StepCard number="3" title='Agregar "Obtener contenido de la URL"'>
@@ -359,13 +359,13 @@ export default function ConfiguracionPage() {
 
                       <div className="mt-2 space-y-2">
                         <p className="text-[10px] font-semibold text-accent uppercase tracking-wide">URL</p>
-                        <p>Pega esta URL en el campo de URL de la accion:</p>
+                        <p>Pega esta URL en el campo de URL de la acción:</p>
                       </div>
                       <CopyField label="URL" value={apiUrl} copied={copiedField === 'murl'} onCopy={() => copyToClipboard(apiUrl, 'murl')} />
 
                       <div className="mt-3 space-y-2">
-                        <p className="text-[10px] font-semibold text-accent uppercase tracking-wide">Metodo</p>
-                        <p>Toca donde dice <strong>&quot;GET&quot;</strong> y cambialo a <strong>&quot;POST&quot;</strong></p>
+                        <p className="text-[10px] font-semibold text-accent uppercase tracking-wide">Método</p>
+                        <p>Toca donde dice <strong>&quot;GET&quot;</strong> y cámbialo a <strong>&quot;POST&quot;</strong></p>
                       </div>
 
                       <div className="mt-3 space-y-2">
@@ -390,37 +390,37 @@ export default function ConfiguracionPage() {
                           <button type="button" onClick={() => copyToClipboard('amount', 'json-mamount')} className="px-2 py-1.5 font-mono text-left flex items-center gap-1 hover:text-accent transition-colors">
                             amount {copiedField === 'json-mamount' ? <Check size={10} className="text-success" /> : <Copy size={10} className="text-muted" />}
                           </button>
-                          <div className="px-2 py-1.5 text-muted">Numero</div>
-                          <div className="px-2 py-1.5 text-accent font-medium">Entrada proporcionada (del paso &quot;Cuanto gastaste?&quot;)</div>
+                          <div className="px-2 py-1.5 text-muted">Número</div>
+                          <div className="px-2 py-1.5 text-accent font-medium">Entrada proporcionada (del paso &quot;¿Cuánto gastaste?&quot;)</div>
                         </div>
                         <div className="grid grid-cols-3 text-xs items-center">
                           <button type="button" onClick={() => copyToClipboard('merchant', 'json-mmerchant')} className="px-2 py-1.5 font-mono text-left flex items-center gap-1 hover:text-accent transition-colors">
                             merchant {copiedField === 'json-mmerchant' ? <Check size={10} className="text-success" /> : <Copy size={10} className="text-muted" />}
                           </button>
                           <div className="px-2 py-1.5 text-muted">Texto</div>
-                          <div className="px-2 py-1.5 text-accent font-medium">Entrada proporcionada (del paso &quot;En donde compraste?&quot;)</div>
+                          <div className="px-2 py-1.5 text-accent font-medium">Entrada proporcionada (del paso &quot;¿En dónde compraste?&quot;)</div>
                         </div>
                       </div>
                       <p className="text-[10px] text-muted mt-1">Para seleccionar &quot;Entrada proporcionada&quot;: toca el campo de valor, luego toca la variable que aparece arriba del teclado.</p>
                     </StepCard>
 
                     <StepCard number="4" title="Listo">
-                      <p>Ejecutalo despues de cada compra. Puedes agregarlo a tu pantalla de inicio o pedirle a Siri: <strong>&quot;Oye Siri, Registrar gasto&quot;</strong>.</p>
+                      <p>Ejecútalo después de cada compra. Puedes agregarlo a tu pantalla de inicio o pedirle a Siri: <strong>&quot;Oye Siri, Registrar gasto&quot;</strong>.</p>
                     </StepCard>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
-                      <strong>Requisito:</strong> solo funciona si tu tarjeta esta en Apple Wallet y los pagos se notifican por ahi. Si no ves logs en Railway cuando pagas, tu banco no soporta este trigger y debes usar el metodo manual.
+                      <strong>Requisito:</strong> solo funciona si tu tarjeta está en Apple Wallet y los pagos se notifican por ahí. Si no ves logs en Railway cuando pagas, tu banco no soporta este trigger y debes usar el método manual.
                     </div>
 
-                    <StepCard number="1" title="Crear la automatizacion">
-                      <p>Abre <strong>Atajos</strong> &gt; pestana <strong>Automatizacion</strong> &gt; toca <strong>+</strong> &gt; busca <strong>&quot;Transaccion&quot;</strong> &gt; selecciona <strong>&quot;Se completa una transaccion&quot;</strong></p>
+                    <StepCard number="1" title="Crear la automatización">
+                      <p>Abre <strong>Atajos</strong> &gt; pestaña <strong>Automatización</strong> &gt; toca <strong>+</strong> &gt; busca <strong>&quot;Transacción&quot;</strong> &gt; selecciona <strong>&quot;Se completa una transacción&quot;</strong></p>
                       <p className="mt-1">En la siguiente pantalla selecciona <strong>&quot;Ejecutar inmediatamente&quot;</strong> y desactiva <strong>&quot;Notificar cuando se ejecute&quot;</strong> si quieres que sea invisible.</p>
                     </StepCard>
 
                     <StepCard number="2" title='Agregar "Obtener contenido de la URL"'>
-                      <p>Busca y agrega la accion <strong>&quot;Obtener contenido de la URL&quot;</strong>.</p>
+                      <p>Busca y agrega la acción <strong>&quot;Obtener contenido de la URL&quot;</strong>.</p>
 
                       <div className="mt-2 space-y-2">
                         <p className="text-[10px] font-semibold text-accent uppercase tracking-wide">URL</p>
@@ -428,8 +428,8 @@ export default function ConfiguracionPage() {
                       <CopyField label="URL" value={apiUrl} copied={copiedField === 'aurl'} onCopy={() => copyToClipboard(apiUrl, 'aurl')} />
 
                       <div className="mt-3 space-y-2">
-                        <p className="text-[10px] font-semibold text-accent uppercase tracking-wide">Metodo</p>
-                        <p>Cambialo a <strong>&quot;POST&quot;</strong></p>
+                        <p className="text-[10px] font-semibold text-accent uppercase tracking-wide">Método</p>
+                        <p>Cámbialo a <strong>&quot;POST&quot;</strong></p>
                       </div>
 
                       <div className="mt-3 space-y-2">
@@ -454,25 +454,25 @@ export default function ConfiguracionPage() {
                           <button type="button" onClick={() => copyToClipboard('amount', 'json-aamount')} className="px-2 py-1.5 font-mono text-left flex items-center gap-1 hover:text-accent transition-colors">
                             amount {copiedField === 'json-aamount' ? <Check size={10} className="text-success" /> : <Copy size={10} className="text-muted" />}
                           </button>
-                          <div className="px-2 py-1.5 text-muted">Numero</div>
-                          <div className="px-2 py-1.5 text-accent font-medium">Var. magica: Monto</div>
+                          <div className="px-2 py-1.5 text-muted">Número</div>
+                          <div className="px-2 py-1.5 text-accent font-medium">Var. mágica: Monto</div>
                         </div>
                         <div className="grid grid-cols-3 text-xs border-b border-border items-center">
                           <button type="button" onClick={() => copyToClipboard('merchant', 'json-amerchant')} className="px-2 py-1.5 font-mono text-left flex items-center gap-1 hover:text-accent transition-colors">
                             merchant {copiedField === 'json-amerchant' ? <Check size={10} className="text-success" /> : <Copy size={10} className="text-muted" />}
                           </button>
                           <div className="px-2 py-1.5 text-muted">Texto</div>
-                          <div className="px-2 py-1.5 text-accent font-medium">Var. magica: Comercio</div>
+                          <div className="px-2 py-1.5 text-accent font-medium">Var. mágica: Comercio</div>
                         </div>
                         <div className="grid grid-cols-3 text-xs items-center">
                           <button type="button" onClick={() => copyToClipboard('card', 'json-acard')} className="px-2 py-1.5 font-mono text-left flex items-center gap-1 hover:text-accent transition-colors">
                             card {copiedField === 'json-acard' ? <Check size={10} className="text-success" /> : <Copy size={10} className="text-muted" />}
                           </button>
                           <div className="px-2 py-1.5 text-muted">Texto</div>
-                          <div className="px-2 py-1.5 text-accent font-medium">Var. magica: Tarjeta (opcional)</div>
+                          <div className="px-2 py-1.5 text-accent font-medium">Var. mágica: Tarjeta (opcional)</div>
                         </div>
                       </div>
-                      <p className="text-[10px] text-muted mt-1">Las variables magicas aparecen al tocar el campo de valor. Vienen del trigger &quot;Transaccion&quot;.</p>
+                      <p className="text-[10px] text-muted mt-1">Las variables mágicas aparecen al tocar el campo de valor. Vienen del trigger &quot;Transacción&quot;.</p>
                     </StepCard>
                   </div>
                 )}
@@ -485,12 +485,12 @@ export default function ConfiguracionPage() {
                     loading={testingToken}
                     className="flex-1"
                   >
-                    Probar conexion
+                    Probar conexión
                   </Button>
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
-                  Los gastos se categorizan con IA de forma automatica. Si necesitas ajustar algo, editalo desde la app.
+                  Los gastos se categorizan con IA de forma automática. Si necesitas ajustar algo, edítalo desde la app.
                 </div>
 
                 <div className="border-t border-border pt-4 space-y-2">

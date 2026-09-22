@@ -129,7 +129,7 @@ export default function AhorroPage() {
       {goals.length === 0 ? (
         <div className="text-center py-16 text-muted">
           <PiggyBank size={48} className="mx-auto mb-3 text-accent/40" />
-          <p className="text-sm mb-4">Configura cuanto ahorraras cada mes y hacia donde va ese dinero</p>
+          <p className="text-sm mb-4">Configura cuánto ahorrarás cada mes y hacia dónde va ese dinero</p>
           <Button onClick={openCreate}>Crear meta</Button>
         </div>
       ) : (
@@ -181,7 +181,7 @@ export default function AhorroPage() {
       )}
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800">
-        El dinero asignado a metas de ahorro permanece en tu cuenta pero se considera no disponible para gastos. Si un gasto consume ese dinero, recibiras una alerta.
+        El dinero asignado a metas de ahorro permanece en tu cuenta pero se considera no disponible para gastos. Si un gasto consume ese dinero, recibirás una alerta.
       </div>
 
       <Modal open={showForm || !!editingGoal} onClose={closeForm} title={editingGoal ? 'Editar meta de ahorro' : 'Nueva meta de ahorro'}>
@@ -240,12 +240,12 @@ export default function AhorroPage() {
           />
           {cardId && (
             <div className="bg-accent/10 border border-accent/20 rounded-lg px-3 py-2 text-xs text-accent">
-              Se programara un traspaso automatico de la cuenta origen a la cuenta destino en las fechas configuradas.
+              Se programará un traspaso automático de la cuenta origen a la cuenta destino en las fechas configuradas.
             </div>
           )}
           {!cardId && sourceCardId && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-700">
-              El dinero se apartara dentro de la cuenta origen. Si gastas de ese apartado, recibiras una alerta.
+              El dinero se apartará dentro de la cuenta origen. Si gastas de ese apartado, recibirás una alerta.
             </div>
           )}
           <Button type="submit" className="w-full" size="lg">
@@ -257,7 +257,7 @@ export default function AhorroPage() {
       <ConfirmDialog
         open={!!deleteId}
         title="Eliminar meta"
-        message="Esta accion no se puede deshacer. Deseas continuar?"
+        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}

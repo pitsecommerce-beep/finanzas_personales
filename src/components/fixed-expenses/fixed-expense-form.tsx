@@ -139,7 +139,7 @@ export function FixedExpenseForm({ expense, onSuccess }: FixedExpenseFormProps) 
 
       <Input
         id="description"
-        label="Descripcion"
+        label="Descripción"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder={isMsi ? 'Ej: Laptop, Refrigerador' : 'Ej: Renta, Spotify, Gym'}

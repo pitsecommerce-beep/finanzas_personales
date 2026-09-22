@@ -22,12 +22,12 @@ function accountLabel(account: Account): string {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  credit_card: 'Credito',
-  debit: 'Debito',
+  credit_card: 'Crédito',
+  debit: 'Débito',
   cash: 'Efectivo',
   savings: 'Ahorro',
   voucher: 'Vales',
-  investment: 'Inversion',
+  investment: 'Inversión',
 }
 
 export function TransferForm({ onSuccess }: TransferFormProps) {
@@ -46,7 +46,7 @@ export function TransferForm({ onSuccess }: TransferFormProps) {
     e.preventDefault()
     const numAmount = parseFloat(amount)
     if (!numAmount || numAmount <= 0) {
-      toast('Ingresa un monto valido', 'error')
+      toast('Ingresa un monto válido', 'error')
       return
     }
     if (!fromAccountId || !toAccountId) {
@@ -67,7 +67,7 @@ export function TransferForm({ onSuccess }: TransferFormProps) {
       fromAccountId,
       toAccountId,
       amount: numAmount,
-      description: description || (isCreditPayment ? 'Pago a tarjeta de credito' : 'Traspaso entre cuentas'),
+      description: description || (isCreditPayment ? 'Pago a tarjeta de crédito' : 'Traspaso entre cuentas'),
       date,
       categorySlug: isCreditPayment ? 'pago_credito' : 'traspaso',
     })
@@ -104,7 +104,7 @@ export function TransferForm({ onSuccess }: TransferFormProps) {
 
       <Input
         id="description"
-        label="Descripcion (opcional)"
+        label="Descripción (opcional)"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Ej: Pago mensual tarjeta"
@@ -150,7 +150,7 @@ export function TransferForm({ onSuccess }: TransferFormProps) {
 
       {accounts.find(a => a.id === toAccountId)?.account_type === 'credit_card' && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
-          Este traspaso se registra como pago a la deuda de la tarjeta de credito.
+          Este traspaso se registra como pago a la deuda de la tarjeta de crédito.
         </div>
       )}
 

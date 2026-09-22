@@ -183,7 +183,7 @@ export default function IngresosPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         title="Eliminar registro"
-        message="Esta accion no se puede deshacer. Deseas continuar?"
+        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
@@ -192,7 +192,7 @@ export default function IngresosPage() {
       <ConfirmDialog
         open={showBulkDelete}
         title={`Eliminar ${selectedIds.size} ingresos`}
-        message={`Se eliminaran ${selectedIds.size} ingresos. Esta accion no se puede deshacer.`}
+        message={`Se eliminarán ${selectedIds.size} ingresos. Esta acción no se puede deshacer.`}
         confirmLabel="Eliminar todos"
         onConfirm={confirmBulkDelete}
         onCancel={() => setShowBulkDelete(false)}

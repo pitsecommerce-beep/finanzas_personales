@@ -242,7 +242,7 @@ export default function CuentasPage() {
 
           <input
             type="text"
-            placeholder="Descripcion (opcional)"
+            placeholder="Descripción (opcional)"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
@@ -388,7 +388,7 @@ export default function CuentasPage() {
 
             <Select
               id="payAccount"
-              label={payDebt.type === 'receivable' ? 'A que cuenta se deposito?' : 'De que cuenta se pago?'}
+              label={payDebt.type === 'receivable' ? '¿A qué cuenta se depositó?' : '¿De qué cuenta se pagó?'}
               value={selectedAccountId}
               onChange={(e) => setSelectedAccountId(e.target.value)}
               options={accountOptions}
@@ -397,8 +397,8 @@ export default function CuentasPage() {
 
             <p className="text-xs text-muted">
               {payDebt.type === 'receivable'
-                ? 'Se registrara un ingreso en la cuenta seleccionada.'
-                : 'Se registrara un gasto en la cuenta seleccionada.'}
+                ? 'Se registrará un ingreso en la cuenta seleccionada.'
+                : 'Se registrará un gasto en la cuenta seleccionada.'}
             </p>
 
             <div className="flex gap-2">
@@ -419,7 +419,7 @@ export default function CuentasPage() {
       <ConfirmDialog
         open={!!deleteId}
         title="Eliminar cuenta"
-        message="Esta accion no se puede deshacer. Deseas continuar?"
+        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}

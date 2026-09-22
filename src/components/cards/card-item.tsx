@@ -13,12 +13,12 @@ interface CardItemProps {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  credit_card: 'Credito',
-  debit: 'Debito',
+  credit_card: 'Crédito',
+  debit: 'Débito',
   cash: 'Efectivo',
   savings: 'Ahorro',
   voucher: 'Vales',
-  investment: 'Inversion',
+  investment: 'Inversión',
 }
 
 function getIcon(type: string) {
@@ -98,13 +98,13 @@ export function CardItem({ card, balance, onEdit, onDelete, onView }: CardItemPr
           {card.cut_off_day != null && (
             <div>
               <p className={subtextClass}>Corte</p>
-              <p className="font-medium">Dia {card.cut_off_day}</p>
+              <p className="font-medium">Día {card.cut_off_day}</p>
             </div>
           )}
           {card.payment_day != null && (
             <div>
               <p className={subtextClass}>Pago</p>
-              <p className="font-medium">Dia {card.payment_day}</p>
+              <p className="font-medium">Día {card.payment_day}</p>
             </div>
           )}
           {currentBalance != null && (

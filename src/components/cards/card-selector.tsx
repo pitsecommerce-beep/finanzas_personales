@@ -11,12 +11,12 @@ interface CardSelectorProps {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  credit_card: 'Credito',
-  debit: 'Debito',
+  credit_card: 'Crédito',
+  debit: 'Débito',
   cash: 'Efectivo',
   savings: 'Ahorro',
   voucher: 'Vales',
-  investment: 'Inversion',
+  investment: 'Inversión',
 }
 
 function accountLabel(account: Account): string {

@@ -70,10 +70,10 @@ export function IncomeForm({ source, onSuccess }: IncomeFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <Input
         id="description"
-        label="Descripcion"
+        label="Descripción"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="Ej: Nomina, Freelance"
+        placeholder="Ej: Nómina, Freelance"
         required
       />
 
@@ -117,7 +117,7 @@ export function IncomeForm({ source, onSuccess }: IncomeFormProps) {
 
       <Input
         id="nextDate"
-        label="Proximo pago"
+        label="Próximo pago"
         type="date"
         value={nextDate}
         onChange={(e) => setNextDate(e.target.value)}

@@ -88,7 +88,7 @@ export default function GastosFijosPage() {
       <ConfirmDialog
         open={!!deleteId}
         title="Eliminar gasto fijo"
-        message="Esta accion no se puede deshacer. Deseas continuar?"
+        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}

@@ -52,7 +52,7 @@ export function TransactionForm({ type, entry, onSuccess }: TransactionFormProps
     e.preventDefault()
     const numAmount = parseFloat(amount)
     if (!numAmount || numAmount <= 0) {
-      toast('Ingresa un monto valido', 'error')
+      toast('Ingresa un monto válido', 'error')
       return
     }
 
@@ -159,10 +159,10 @@ export function TransactionForm({ type, entry, onSuccess }: TransactionFormProps
 
       <Input
         id="description"
-        label="Descripcion"
+        label="Descripción"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder={type === 'expense' ? 'En que gastaste?' : 'De donde proviene?'}
+        placeholder={type === 'expense' ? '¿En qué gastaste?' : '¿De dónde proviene?'}
         required
       />
 
