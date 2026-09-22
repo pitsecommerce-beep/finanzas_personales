@@ -23,6 +23,7 @@ export default function ReportesPage() {
         setLoading(false)
         return
       }
+      setLoading(true)
       try {
         const supabase = createClient()
         const now = new Date()
@@ -48,7 +49,7 @@ export default function ReportesPage() {
           supabase
             .from('ledger_entries')
             .select('*')
-            .gte('occurred_on', format(subMonths(now, 5), 'yyyy-MM-01'))
+            .gte('occurred_on', startDate)
             .is('deleted_at', null)
             .not('entry_type', 'eq', 'transfer')
             .order('occurred_on', { ascending: true }),
@@ -74,9 +75,11 @@ export default function ReportesPage() {
     .filter((e) => e.entry_type === 'expense')
     .reduce((sum, e) => sum + Math.abs(Number(e.amount)), 0)
 
+  const monthCount = period === 'month' ? 1 : period === '3months' ? 3 : 12
+
   const monthlyData = (() => {
     const months: Record<string, { month: string; ingresos: number; gastos: number }> = {}
-    for (let i = 5; i >= 0; i--) {
+    for (let i = monthCount - 1; i >= 0; i--) {
       const d = subMonths(new Date(), i)
       const key = format(d, 'yyyy-MM')
       months[key] = {
@@ -131,13 +134,15 @@ export default function ReportesPage() {
       <SpendingChart entries={entries} />
 
       <div className="bg-white rounded-xl border border-border p-4">
-        <h3 className="font-semibold text-sm mb-4">Ingresos vs Gastos (6 meses)</h3>
+        <h3 className="font-semibold text-sm mb-4">
+          Ingresos vs Gastos ({monthCount === 1 ? 'mes actual' : `${monthCount} meses`})
+        </h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => formatMXN(v)} />
               <Tooltip
                 formatter={(value) => formatMXN(Number(value))}
                 contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '12px' }}
