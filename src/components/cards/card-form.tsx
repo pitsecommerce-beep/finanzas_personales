@@ -90,7 +90,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
     }
 
     if (isInvestment) {
-      accountData.institution = institution || 'Inversion'
+      accountData.institution = institution || 'Inversión'
       accountData.liquidity = liquidity
     }
 
@@ -113,12 +113,12 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
   }
 
   const typeOptions: { value: AccountType; label: string }[] = [
-    { value: 'credit_card', label: 'Credito' },
-    { value: 'debit', label: 'Debito' },
+    { value: 'credit_card', label: 'Crédito' },
+    { value: 'debit', label: 'Débito' },
     { value: 'savings', label: 'Ahorro' },
     { value: 'cash', label: 'Efectivo' },
     { value: 'voucher', label: 'Vales' },
-    { value: 'investment', label: 'Inversion' },
+    { value: 'investment', label: 'Inversión' },
   ]
 
   const showBank = accountType !== 'cash' && accountType !== 'voucher' && accountType !== 'investment'
@@ -164,7 +164,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
       {showBank && (
         <Select
           id="bank"
-          label="Banco / Institucion"
+          label="Banco / Institución"
           value={institution}
           onChange={(e) => setInstitution(e.target.value)}
           options={BANKS.map((b) => ({ value: b, label: b }))}
@@ -215,7 +215,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
       {showDigits && (
         <Input
           id="lastFour"
-          label="Ultimos 4 digitos"
+          label="Últimos 4 dígitos"
           value={lastFour}
           onChange={(e) => setLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))}
           placeholder="1234"
@@ -228,7 +228,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
           <div className="grid grid-cols-2 gap-3">
             <Input
               id="cutOff"
-              label="Dia de corte"
+              label="Día de corte"
               type="number"
               min="1"
               max="31"
@@ -239,7 +239,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
             />
             <Input
               id="paymentDay"
-              label="Dia de pago"
+              label="Día de pago"
               type="number"
               min="1"
               max="31"
@@ -251,7 +251,7 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
           </div>
           <CurrencyInput
             id="creditLimit"
-            label="Limite de credito"
+            label="Límite de crédito"
             value={creditLimit}
             onChange={setCreditLimit}
             placeholder="50,000"
@@ -314,10 +314,10 @@ export function CardForm({ card, onSuccess }: CardFormProps) {
           />
           <Input
             id="notes"
-            label="Notas (ticker, titulos, etc.)"
+            label="Notas (ticker, títulos, etc.)"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Ej: NAFTRAC 10 titulos a $52.30"
+            placeholder="Ej: NAFTRAC 10 títulos a $52.30"
           />
         </>
       )}

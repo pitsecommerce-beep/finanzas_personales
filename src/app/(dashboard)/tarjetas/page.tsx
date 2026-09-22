@@ -15,8 +15,8 @@ import type { Account, AccountType } from '@/types/database'
 const TYPE_ORDER: AccountType[] = ['credit_card', 'debit', 'cash', 'savings', 'voucher', 'investment']
 
 const TYPE_LABELS: Record<string, string> = {
-  credit_card: 'Tarjetas de credito',
-  debit: 'Tarjetas de debito',
+  credit_card: 'Tarjetas de crédito',
+  debit: 'Tarjetas de débito',
   cash: 'Efectivo',
   savings: 'Cuentas de ahorro',
   voucher: 'Vales',
@@ -119,7 +119,7 @@ export default function TarjetasPage() {
       <ConfirmDialog
         open={!!deleteId}
         title="Eliminar cuenta"
-        message="Esta accion no se puede deshacer. Deseas continuar?"
+        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}

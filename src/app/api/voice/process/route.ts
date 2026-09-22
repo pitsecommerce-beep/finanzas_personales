@@ -5,19 +5,19 @@ import { todayMX } from '@/lib/utils/dates'
 const TOOLS = [
   {
     name: 'add_expense',
-    description: 'Registra un gasto. Requiere monto, descripcion y categoria. Opcionalmente cuenta, fecha y meses sin intereses.',
+    description: 'Registra un gasto. Requiere monto, descripción y categoría. Opcionalmente cuenta, fecha y meses sin intereses.',
     input_schema: {
       type: 'object' as const,
       properties: {
         amount: { type: 'number' as const, description: 'Monto en MXN' },
-        description: { type: 'string' as const, description: 'Descripcion del gasto' },
+        description: { type: 'string' as const, description: 'Descripción del gasto' },
         category: {
           type: 'string' as const,
           enum: ['restaurante','transporte','despensa','entretenimiento','salud','educacion','servicios','ropa','hogar','mascotas','viajes','regalos','suscripciones','cafe','gimnasio','otros'],
         },
         account_id: { type: 'string' as const, description: 'UUID de la cuenta. Si no se especifica, queda null.' },
         date: { type: 'string' as const, description: 'Fecha YYYY-MM-DD. Si no se dice, usa hoy.' },
-        installment_months: { type: 'number' as const, description: 'Meses sin intereses (2-48). Solo para tarjetas de credito.' },
+        installment_months: { type: 'number' as const, description: 'Meses sin intereses (2-48). Solo para tarjetas de crédito.' },
       },
       required: ['amount', 'description', 'category'],
     },
@@ -29,7 +29,7 @@ const TOOLS = [
       type: 'object' as const,
       properties: {
         amount: { type: 'number' as const, description: 'Monto en MXN' },
-        description: { type: 'string' as const, description: 'Descripcion del ingreso' },
+        description: { type: 'string' as const, description: 'Descripción del ingreso' },
         category: {
           type: 'string' as const,
           enum: ['nomina','freelance','negocio','inversiones','rendimientos','renta','venta','otros'],
@@ -48,7 +48,7 @@ const TOOLS = [
       properties: {
         description: { type: 'string' as const },
         monthly_amount: { type: 'number' as const, description: 'Monto mensual en MXN' },
-        total_months: { type: 'number' as const, description: 'Numero de meses. 1 para recurrente, 2-48 para MSI.' },
+        total_months: { type: 'number' as const, description: 'Número de meses. 1 para recurrente, 2-48 para MSI.' },
         category: {
           type: 'string' as const,
           enum: ['restaurante','transporte','despensa','entretenimiento','salud','educacion','servicios','ropa','hogar','mascotas','viajes','regalos','suscripciones','cafe','gimnasio','otros'],
@@ -61,7 +61,7 @@ const TOOLS = [
   },
   {
     name: 'add_income_source',
-    description: 'Registra una fuente de ingreso fija (nomina, freelance, negocio, etc.).',
+    description: 'Registra una fuente de ingreso fija (nómina, freelance, negocio, etc.).',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -69,7 +69,7 @@ const TOOLS = [
         amount: { type: 'number' as const, description: 'Monto aproximado' },
         frequency: { type: 'string' as const, enum: ['weekly','biweekly','monthly'] },
         account_id: { type: 'string' as const, description: 'UUID de la cuenta destino' },
-        next_occurrence: { type: 'string' as const, description: 'Proximo pago YYYY-MM-DD' },
+        next_occurrence: { type: 'string' as const, description: 'Próximo pago YYYY-MM-DD' },
       },
       required: ['description', 'amount', 'frequency'],
     },
@@ -84,14 +84,14 @@ const TOOLS = [
         person_name: { type: 'string' as const, description: 'Nombre de la persona' },
         description: { type: 'string' as const },
         amount: { type: 'number' as const },
-        due_date: { type: 'string' as const, description: 'Fecha limite YYYY-MM-DD' },
+        due_date: { type: 'string' as const, description: 'Fecha límite YYYY-MM-DD' },
       },
       required: ['type', 'person_name', 'amount'],
     },
   },
   {
     name: 'ask_user',
-    description: 'Pregunta al usuario cuando falta informacion para completar el registro. Usa esto cuando no tengas datos suficientes.',
+    description: 'Pregunta al usuario cuando falta información para completar el registro. Usa esto cuando no tengas datos suficientes.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -273,14 +273,14 @@ export async function POST(request: NextRequest) {
 El usuario te dicta por voz lo que quiere registrar. Tu trabajo es interpretar su mensaje y usar las herramientas para registrar gastos, ingresos, gastos fijos, fuentes de ingreso o cuentas por cobrar/pagar.
 
 REGLAS:
-- Si falta informacion esencial (monto, descripcion), usa ask_user para preguntar
+- Si falta información esencial (monto, descripción), usa ask_user para preguntar
 - Si el usuario menciona una cuenta o tarjeta por nombre, busca el ID en la lista de cuentas
 - Si dice "a meses" o "MSI", usa installment_months en add_expense o add_fixed_expense
 - Si dice "me deben" o "le preste a", es cuenta por cobrar (receivable)
 - Si dice "le debo" o "tengo que pagar", es cuenta por pagar (payable)
 - Si dice "gasto fijo" o "pago mensual" o "renta" o "servicio recurrente", usa add_fixed_expense
-- Si dice "me pagan" o "mi sueldo" o "nomina", usa add_income_source para ingresos fijos
-- Responde siempre en espanol, de forma breve y en texto plano (sin markdown, sin asteriscos, sin negritas)
+- Si dice "me pagan" o "mi sueldo" o "nómina", usa add_income_source para ingresos fijos
+- Responde siempre en español, de forma breve y en texto plano (sin markdown, sin asteriscos, sin negritas)
 - La fecha de hoy es ${todayMX()}
 
 CUENTAS DEL USUARIO:

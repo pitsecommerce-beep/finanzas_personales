@@ -111,7 +111,7 @@ export default function ReportesPage() {
           {[
             { value: 'month', label: 'Mes' },
             { value: '3months', label: '3 meses' },
-            { value: 'year', label: 'Ano' },
+            { value: 'year', label: 'Año' },
           ].map((p) => (
             <button
               key={p.value}
@@ -175,7 +175,7 @@ export default function ReportesPage() {
             </div>
             <div>
               <p className="text-sm text-muted">
-                Estas ahorrando {formatMXN(Math.max(0, income - expenses))} este periodo
+                Estás ahorrando {formatMXN(Math.max(0, income - expenses))} este periodo
               </p>
             </div>
           </div>

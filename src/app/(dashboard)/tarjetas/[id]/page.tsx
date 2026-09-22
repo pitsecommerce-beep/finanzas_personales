@@ -106,24 +106,24 @@ export default function CardDetailPage() {
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-1">
                 <CalendarDays size={16} className="text-yellow-600" />
-                <p className="text-xs text-yellow-700">Proximo corte</p>
+                <p className="text-xs text-yellow-700">Próximo corte</p>
               </div>
               <p className="font-semibold text-yellow-800">
                 {format(nextCutOff, "d 'de' MMMM", { locale: es })}
               </p>
-              <p className="text-xs text-yellow-600 mt-0.5">En {daysUntil(nextCutOff)} dias</p>
+              <p className="text-xs text-yellow-600 mt-0.5">En {daysUntil(nextCutOff)} días</p>
             </div>
           )}
           {nextPayment && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-1">
                 <CalendarDays size={16} className="text-red-600" />
-                <p className="text-xs text-red-700">Proximo pago</p>
+                <p className="text-xs text-red-700">Próximo pago</p>
               </div>
               <p className="font-semibold text-red-800">
                 {format(nextPayment, "d 'de' MMMM", { locale: es })}
               </p>
-              <p className="text-xs text-red-600 mt-0.5">En {daysUntil(nextPayment)} dias</p>
+              <p className="text-xs text-red-600 mt-0.5">En {daysUntil(nextPayment)} días</p>
             </div>
           )}
         </div>

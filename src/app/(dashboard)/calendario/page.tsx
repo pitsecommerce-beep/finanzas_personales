@@ -18,7 +18,7 @@ export default function CalendarioPage() {
   useEffect(() => {
     async function load() {
       if (!isSupabaseConfigured()) {
-        console.warn('[Nummo] Calendario: sin conexion a BD')
+        console.warn('[Nummo] Calendario: sin conexión a BD')
         return
       }
       try {
@@ -94,14 +94,14 @@ export default function CalendarioPage() {
     return events
   }
 
-  const weekDays = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab']
+  const weekDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold">Calendario</h1>
         <div className="mt-2 bg-accent/10 border border-accent/20 rounded-lg px-3 py-2 text-sm text-accent">
-          Sincronizacion con Google Calendar disponible proximamente
+          Sincronización con Google Calendar disponible próximamente
         </div>
       </div>
 
@@ -183,7 +183,7 @@ export default function CalendarioPage() {
               </button>
             </div>
             {dayEvents.length === 0 ? (
-              <p className="text-sm text-muted p-4 text-center">Sin eventos para este dia</p>
+              <p className="text-sm text-muted p-4 text-center">Sin eventos para este día</p>
             ) : (
               <div className="divide-y divide-border">
                 {dayEvents.map((ev, i) => (

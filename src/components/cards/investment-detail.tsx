@@ -15,7 +15,7 @@ export function InvestmentDetail({ account, balance }: InvestmentDetailProps) {
     <div className="bg-white rounded-xl border border-border p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-xs text-muted">{account.institution ?? 'Inversion'}</p>
+          <p className="text-xs text-muted">{account.institution ?? 'Inversión'}</p>
           <p className="text-sm font-medium">{account.alias}</p>
         </div>
         <p className="text-lg font-bold">{formatMXN(currentBalance)}</p>
