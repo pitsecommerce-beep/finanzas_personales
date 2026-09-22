@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { formatMXN } from '@/lib/utils/currency'
-import { getNextPaymentDate, getNextCutOffDate, daysUntil } from '@/lib/utils/dates'
+import { getNextPaymentDate, getNextCutOffDate, getClosedBillingPeriod, daysUntil } from '@/lib/utils/dates'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ArrowLeft, CalendarDays, Upload } from 'lucide-react'
@@ -31,20 +31,50 @@ export default function CardDetailPage() {
   const [statementAnalysis, setStatementAnalysis] = useState<StatementAnalysis | null>(null)
   const [analyzingPdf, setAnalyzingPdf] = useState(false)
   const [savingStatement, setSavingStatement] = useState(false)
+  const [nextPaymentTotal, setNextPaymentTotal] = useState<number | null>(null)
 
   const loadData = useCallback(async () => {
     if (!isSupabaseConfigured()) { setLoading(false); return }
     const supabase = createClient()
-    const [accountRes, balanceRes, entriesRes, installRes] = await Promise.all([
-      supabase.from('accounts').select('*').eq('id', id).single(),
+
+    const accountRes = await supabase.from('accounts').select('*').eq('id', id).single()
+    const acct = accountRes.data
+    setAccount(acct)
+    if (!acct) { setLoading(false); return }
+
+    const isCreditWithCutOff = acct.account_type === 'credit_card' && acct.cut_off_day != null
+
+    const [balanceRes, entriesRes, installRes, billingRes] = await Promise.all([
       supabase.from('v_account_balances').select('*').eq('account_id', id).single(),
       supabase.from('ledger_entries').select('*, account:accounts(*), category:categories(*)').eq('account_id', id).is('deleted_at', null).order('occurred_on', { ascending: false }).limit(50),
       supabase.from('installment_plans').select('*').eq('account_id', id).eq('is_active', true),
+      isCreditWithCutOff
+        ? (() => {
+            const closed = getClosedBillingPeriod(acct.cut_off_day!)
+            return supabase.from('ledger_entries')
+              .select('id, entry_type, amount')
+              .eq('account_id', id)
+              .is('deleted_at', null)
+              .not('entry_type', 'eq', 'transfer')
+              .gte('occurred_on', format(closed.start, 'yyyy-MM-dd'))
+              .lte('occurred_on', format(closed.end, 'yyyy-MM-dd'))
+          })()
+        : Promise.resolve({ data: null }),
     ])
-    setAccount(accountRes.data)
+
     setBalance(balanceRes.data)
     setEntries(entriesRes.data ?? [])
     setInstallments(installRes.data ?? [])
+
+    if (billingRes.data) {
+      const total = (billingRes.data as { entry_type: string; amount: number }[])
+        .filter(e => e.entry_type === 'expense')
+        .reduce((sum, e) => sum + Math.abs(Number(e.amount)), 0)
+      setNextPaymentTotal(total)
+    } else {
+      setNextPaymentTotal(null)
+    }
+
     setLoading(false)
   }, [id])
 
@@ -292,6 +322,29 @@ export default function CardDetailPage() {
           <p className="text-lg font-bold text-danger">{formatMXN(monthExpenses)}</p>
         </div>
       </div>
+
+      {isCredit && nextPaymentTotal != null && nextPayment && account.cut_off_day != null && (
+        <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-red-600 mb-1">Total a pagar</p>
+              <p className="text-2xl font-bold text-red-700">{formatMXN(nextPaymentTotal + fixedMonthly)}</p>
+              {fixedMonthly > 0 && (
+                <p className="text-xs text-muted mt-1">
+                  Compras: {formatMXN(nextPaymentTotal)} + MSI: {formatMXN(fixedMonthly)}
+                </p>
+              )}
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-red-600">Pagar antes del</p>
+              <p className="text-sm font-semibold text-red-800">
+                {format(nextPayment, "d 'de' MMMM", { locale: es })}
+              </p>
+              <p className="text-xs text-red-500 mt-0.5">En {daysUntil(nextPayment)} días</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {(nextPayment || nextCutOff) && (
         <div className="grid grid-cols-2 gap-3">
