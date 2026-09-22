@@ -7,10 +7,11 @@ import { formatMXN } from '@/lib/utils/currency'
 import { getNextPaymentDate, getNextCutOffDate, daysUntil } from '@/lib/utils/dates'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ArrowLeft, CalendarDays } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Upload } from 'lucide-react'
 import { TransactionList } from '@/components/transactions/transaction-list'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import { InvestmentDetail } from '@/components/cards/investment-detail'
+import { StatementPreview, type StatementAnalysis } from '@/components/cards/statement-preview'
 import { Modal } from '@/components/ui/modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useToast } from '@/components/ui/toast'
@@ -27,6 +28,9 @@ export default function CardDetailPage() {
   const [loading, setLoading] = useState(true)
   const [editingEntry, setEditingEntry] = useState<LedgerEntry | null>(null)
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null)
+  const [statementAnalysis, setStatementAnalysis] = useState<StatementAnalysis | null>(null)
+  const [analyzingPdf, setAnalyzingPdf] = useState(false)
+  const [savingStatement, setSavingStatement] = useState(false)
 
   const loadData = useCallback(async () => {
     if (!isSupabaseConfigured()) { setLoading(false); return }
@@ -68,6 +72,136 @@ export default function CardDetailPage() {
   function handleEditSuccess() {
     setEditingEntry(null)
     loadData()
+  }
+
+  async function handlePdfUpload(file: File) {
+    setAnalyzingPdf(true)
+    try {
+      const buffer = await file.arrayBuffer()
+      const base64 = btoa(
+        new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      )
+
+      const res = await fetch('/api/statement/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdf_base64: base64, account_id: id }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        toast(err.error || 'Error al analizar el PDF', 'error')
+        return
+      }
+
+      const data = await res.json()
+      setStatementAnalysis(data.analysis)
+    } catch {
+      toast('Error al procesar el archivo', 'error')
+    } finally {
+      setAnalyzingPdf(false)
+    }
+  }
+
+  async function handleConfirmStatement() {
+    if (!statementAnalysis) return
+    setSavingStatement(true)
+
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { toast('No autorizado', 'error'); return }
+
+      const { data: stmt, error: stmtErr } = await supabase
+        .from('card_statements')
+        .insert({
+          account_id: id,
+          user_id: user.id,
+          period_start: statementAnalysis.period_start,
+          period_end: statementAnalysis.period_end,
+          payment_due_date: statementAnalysis.payment_due_date,
+          total_amount: statementAnalysis.total_amount,
+          minimum_payment: statementAnalysis.minimum_payment,
+          no_interest_payment: statementAnalysis.no_interest_payment,
+        })
+        .select()
+        .single()
+
+      if (stmtErr) {
+        toast('Error al guardar el estado de cuenta', 'error')
+        console.error(stmtErr)
+        return
+      }
+
+      const regularTx = statementAnalysis.transactions.filter(t => !t.is_msi)
+      if (regularTx.length > 0) {
+        const entries = regularTx.map(tx => ({
+          user_id: user.id,
+          account_id: id,
+          entry_type: 'expense' as const,
+          amount: -Math.abs(tx.amount),
+          description: tx.description,
+          occurred_on: tx.date,
+          source: 'import' as const,
+          currency: 'MXN',
+          statement_id: stmt.id,
+        }))
+
+        const { error: txErr } = await supabase.from('ledger_entries').insert(entries)
+        if (txErr) console.error('Error al insertar transacciones:', txErr)
+      }
+
+      for (const ip of statementAnalysis.installment_summary) {
+        const endDate = new Date(ip.start_date)
+        endDate.setMonth(endDate.getMonth() + ip.total_months)
+
+        const { data: plan, error: ipErr } = await supabase
+          .from('installment_plans')
+          .insert({
+            user_id: user.id,
+            account_id: id,
+            description: ip.description,
+            total_amount: ip.total_amount,
+            monthly_amount: ip.monthly_amount,
+            total_months: ip.total_months,
+            remaining_months: ip.remaining_months,
+            start_date: ip.start_date,
+            end_date: endDate.toISOString().slice(0, 10),
+            currency: 'MXN',
+            is_active: ip.remaining_months > 0,
+          })
+          .select()
+          .single()
+
+        if (ipErr) {
+          console.error('Error al insertar plan MSI:', ipErr)
+          continue
+        }
+
+        if (plan) {
+          await supabase.from('ledger_entries').insert({
+            user_id: user.id,
+            account_id: id,
+            entry_type: 'expense' as const,
+            amount: -Math.abs(ip.monthly_amount),
+            description: `MSI: ${ip.description}`,
+            occurred_on: statementAnalysis.period_end,
+            source: 'import' as const,
+            currency: 'MXN',
+            statement_id: stmt.id,
+            installment_plan_id: plan.id,
+          })
+        }
+      }
+
+      toast('Estado de cuenta registrado', 'success')
+      setStatementAnalysis(null)
+      await loadData()
+    } catch {
+      toast('Error al guardar', 'error')
+    } finally {
+      setSavingStatement(false)
+    }
   }
 
   if (loading) {
@@ -112,6 +246,35 @@ export default function CardDetailPage() {
       </div>
 
       {account.account_type === 'investment' && <InvestmentDetail account={account} balance={balance ?? undefined} />}
+
+      {isCredit && (
+        <div className="flex gap-2">
+          <label className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition ${analyzingPdf ? 'bg-gray-100 text-muted' : 'bg-accent/10 text-accent hover:bg-accent/20'}`}>
+            {analyzingPdf ? (
+              <>
+                <div className="animate-spin h-4 w-4 border-2 border-accent border-t-transparent rounded-full" />
+                Analizando PDF...
+              </>
+            ) : (
+              <>
+                <Upload size={16} />
+                Cargar estado de cuenta
+              </>
+            )}
+            <input
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              disabled={analyzingPdf}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handlePdfUpload(file)
+                e.target.value = ''
+              }}
+            />
+          </label>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white rounded-xl border border-border p-4">
@@ -215,6 +378,22 @@ export default function CardDetailPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteEntryId(null)}
       />
+
+      <Modal
+        open={!!statementAnalysis}
+        onClose={() => setStatementAnalysis(null)}
+        title="Estado de cuenta"
+      >
+        {statementAnalysis && (
+          <StatementPreview
+            analysis={statementAnalysis}
+            accountAlias={account.alias}
+            onConfirm={handleConfirmStatement}
+            onCancel={() => setStatementAnalysis(null)}
+            loading={savingStatement}
+          />
+        )}
+      </Modal>
     </div>
   )
 }
