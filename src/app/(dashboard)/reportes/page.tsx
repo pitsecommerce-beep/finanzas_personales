@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { SpendingChart } from '@/components/dashboard/spending-chart'
 import { SummaryCards } from '@/components/dashboard/summary-cards'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 import { formatMXN } from '@/lib/utils/currency'
 import { format, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -98,6 +98,14 @@ export default function ReportesPage() {
     return Object.values(months)
   })()
 
+  const cashFlowData = (() => {
+    let cumulative = 0
+    return monthlyData.map((m) => {
+      cumulative += m.ingresos - m.gastos
+      return { month: m.month, flujo: Math.round(cumulative * 100) / 100 }
+    })
+  })()
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -153,6 +161,42 @@ export default function ReportesPage() {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {cashFlowData.length > 1 && (
+        <div className="bg-white rounded-xl border border-border p-4">
+          <h3 className="font-semibold text-sm mb-4">
+            Flujo de caja acumulado ({monthCount === 1 ? 'mes actual' : `${monthCount} meses`})
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={cashFlowData}>
+                <defs>
+                  <linearGradient id="flujoCajaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#14B8A6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => formatMXN(v)} />
+                <Tooltip
+                  formatter={(value) => formatMXN(Number(value))}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '12px' }}
+                />
+                <ReferenceLine y={0} stroke="#94A3B8" strokeDasharray="3 3" />
+                <Area
+                  type="monotone"
+                  dataKey="flujo"
+                  stroke="#14B8A6"
+                  strokeWidth={2}
+                  fill="url(#flujoCajaGrad)"
+                  name="Flujo acumulado"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {income > 0 && (
         <div className="bg-white rounded-xl border border-border p-4">

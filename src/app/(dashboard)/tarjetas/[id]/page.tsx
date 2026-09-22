@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { formatMXN } from '@/lib/utils/currency'
@@ -9,36 +9,66 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ArrowLeft, CalendarDays } from 'lucide-react'
 import { TransactionList } from '@/components/transactions/transaction-list'
+import { TransactionForm } from '@/components/transactions/transaction-form'
 import { InvestmentDetail } from '@/components/cards/investment-detail'
+import { Modal } from '@/components/ui/modal'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useToast } from '@/components/ui/toast'
 import type { Account, AccountBalance, LedgerEntry, InstallmentPlan } from '@/types/database'
 
 export default function CardDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const { toast } = useToast()
   const [account, setAccount] = useState<Account | null>(null)
   const [balance, setBalance] = useState<AccountBalance | null>(null)
   const [entries, setEntries] = useState<LedgerEntry[]>([])
   const [installments, setInstallments] = useState<InstallmentPlan[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingEntry, setEditingEntry] = useState<LedgerEntry | null>(null)
+  const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null)
+
+  const loadData = useCallback(async () => {
+    if (!isSupabaseConfigured()) { setLoading(false); return }
+    const supabase = createClient()
+    const [accountRes, balanceRes, entriesRes, installRes] = await Promise.all([
+      supabase.from('accounts').select('*').eq('id', id).single(),
+      supabase.from('v_account_balances').select('*').eq('account_id', id).single(),
+      supabase.from('ledger_entries').select('*, account:accounts(*), category:categories(*)').eq('account_id', id).is('deleted_at', null).order('occurred_on', { ascending: false }).limit(50),
+      supabase.from('installment_plans').select('*').eq('account_id', id).eq('is_active', true),
+    ])
+    setAccount(accountRes.data)
+    setBalance(balanceRes.data)
+    setEntries(entriesRes.data ?? [])
+    setInstallments(installRes.data ?? [])
+    setLoading(false)
+  }, [id])
 
   useEffect(() => {
-    async function load() {
-      if (!isSupabaseConfigured()) { setLoading(false); return }
-      const supabase = createClient()
-      const [accountRes, balanceRes, entriesRes, installRes] = await Promise.all([
-        supabase.from('accounts').select('*').eq('id', id).single(),
-        supabase.from('v_account_balances').select('*').eq('account_id', id).single(),
-        supabase.from('ledger_entries').select('*, account:accounts(*), category:categories(*)').eq('account_id', id).is('deleted_at', null).order('occurred_on', { ascending: false }).limit(50),
-        supabase.from('installment_plans').select('*').eq('account_id', id).eq('is_active', true),
-      ])
-      setAccount(accountRes.data)
-      setBalance(balanceRes.data)
-      setEntries(entriesRes.data ?? [])
-      setInstallments(installRes.data ?? [])
-      setLoading(false)
+    loadData()
+  }, [loadData])
+
+  async function handleDelete() {
+    if (!deleteEntryId) return
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('ledger_entries')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', deleteEntryId)
+
+    if (error) {
+      toast('Error al eliminar', 'error')
+    } else {
+      toast('Movimiento eliminado', 'success')
+      await loadData()
     }
-    load()
-  }, [id])
+    setDeleteEntryId(null)
+  }
+
+  function handleEditSuccess() {
+    setEditingEntry(null)
+    loadData()
+  }
 
   if (loading) {
     return (
@@ -156,8 +186,35 @@ export default function CardDetailPage() {
 
       <div>
         <h3 className="font-semibold text-sm mb-3">Movimientos recientes</h3>
-        <TransactionList entries={entries} />
+        <TransactionList
+          entries={entries}
+          onEdit={(entry) => setEditingEntry(entry)}
+          onDelete={(entryId) => setDeleteEntryId(entryId)}
+        />
       </div>
+
+      <Modal
+        open={!!editingEntry}
+        onClose={() => setEditingEntry(null)}
+        title="Editar movimiento"
+      >
+        {editingEntry && (
+          <TransactionForm
+            type={editingEntry.entry_type === 'income' ? 'income' : 'expense'}
+            entry={editingEntry}
+            onSuccess={handleEditSuccess}
+          />
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        open={!!deleteEntryId}
+        title="Eliminar movimiento"
+        message="Esta acción no se puede deshacer. ¿Deseas continuar?"
+        confirmLabel="Eliminar"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteEntryId(null)}
+      />
     </div>
   )
 }
