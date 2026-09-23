@@ -55,7 +55,7 @@ export default function InicioPage() {
       </div>
 
       <div>
-        <h2 className="font-semibold text-sm mb-3">Ultimos movimientos</h2>
+        <h2 className="font-semibold text-sm mb-3">Últimos movimientos</h2>
         <TransactionList entries={entries.slice(0, 10)} />
       </div>
     </div>
