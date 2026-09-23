@@ -17,8 +17,8 @@ export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-40 pb-[env(safe-area-inset-bottom)]">
-      <div className="flex items-center justify-around py-2">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-40">
+      <div className="flex items-center justify-around pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         {tabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href)
           return (
