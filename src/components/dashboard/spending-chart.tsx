@@ -48,7 +48,7 @@ export function SpendingChart({ entries }: SpendingChartProps) {
 
   return (
     <div className="bg-white rounded-xl border border-border p-4">
-      <h3 className="font-semibold text-sm mb-4">Gastos por categoria</h3>
+      <h3 className="font-semibold text-sm mb-4">Gastos por categoría</h3>
       <div className="flex flex-col sm:flex-row items-center gap-4">
         <div className="w-48 h-48">
           <ResponsiveContainer width="100%" height="100%">

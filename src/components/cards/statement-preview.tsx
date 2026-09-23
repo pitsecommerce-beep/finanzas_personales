@@ -81,7 +81,7 @@ export function StatementPreview({ analysis, accountAlias, onConfirm, onCancel, 
       </div>
 
       <p className="text-xs text-muted">
-        Periodo: {formatDate(analysis.period_start)} al {formatDate(analysis.period_end)}
+        Período: {formatDate(analysis.period_start)} al {formatDate(analysis.period_end)}
       </p>
 
       <div className="grid grid-cols-2 gap-3">

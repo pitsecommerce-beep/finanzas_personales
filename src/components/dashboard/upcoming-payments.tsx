@@ -46,7 +46,7 @@ export function UpcomingPayments({ accounts }: UpcomingPaymentsProps) {
 
   return (
     <div className="bg-white rounded-xl border border-border p-4">
-      <h3 className="font-semibold text-sm mb-3">Proximos pagos</h3>
+      <h3 className="font-semibold text-sm mb-3">Próximos pagos</h3>
       <div className="space-y-3">
         {upcoming.map(({ account, paymentDate, days }) => (
           <div key={account.id} className="flex items-center gap-3">
@@ -66,7 +66,7 @@ export function UpcomingPayments({ accounts }: UpcomingPaymentsProps) {
                   : 'bg-accent/10 text-accent'
               }`}
             >
-              {days === 0 ? 'Hoy' : days === 1 ? 'Manana' : `${days} dias`}
+              {days === 0 ? 'Hoy' : days === 1 ? 'Mañana' : `${days} días`}
             </span>
           </div>
         ))}

@@ -46,7 +46,7 @@ interface MonthData {
   fixedIncome: { description: string; amount: number }[]
   sporadicIncome: { category: string; amount: number }[]
   receivables: { person: string; amount: number }[]
-  fixedExpenses: { description: string; amount: number }[]
+  fixedExpenses: { id: string; description: string; amount: number }[]
   sporadicExpenses: { description: string; category: string; amount: number }[]
   payables: { person: string; amount: number }[]
   totalIncome: number
@@ -163,7 +163,7 @@ export default function PylPage() {
         return true
       })
       .map(ip => ({
-        description: ip.description, amount: Number(ip.monthly_amount),
+        id: ip.id, description: ip.description, amount: Number(ip.monthly_amount),
       }))
 
     const sporadicExpenses = monthEntries
@@ -249,7 +249,7 @@ export default function PylPage() {
       rows.push(['INGRESOS FIJOS'])
       md.fixedIncome.forEach(r => rows.push([r.description, r.amount]))
       rows.push([])
-      rows.push(['GASTOS FIJOS'])
+      rows.push(['GASTOS FIJOS (MSI)'])
       md.fixedExpenses.forEach(r => rows.push([r.description, r.amount]))
       rows.push([])
       rows.push(['RESULTADO NETO', md.net])
@@ -429,7 +429,11 @@ function Section({ title, color, items, emptyText }: {
 
 function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: MonthData }[] }) {
   const allFixedIncome = [...new Set(monthsData.flatMap(md => md.data.fixedIncome.map(r => r.description)))]
-  const allFixedExpenses = [...new Set(monthsData.flatMap(md => md.data.fixedExpenses.map(r => r.description)))]
+  const fixedExpenseMap = new Map<string, string>()
+  monthsData.forEach(md => md.data.fixedExpenses.forEach(r => {
+    if (!fixedExpenseMap.has(r.id)) fixedExpenseMap.set(r.id, r.description)
+  }))
+  const allFixedExpenseIds = [...fixedExpenseMap.keys()]
   const allSporadicIncome = [...new Set(monthsData.flatMap(md => md.data.sporadicIncome.map(r => r.category)))]
   const sporadicExpenseCategories = [...new Set(monthsData.flatMap(md => md.data.sporadicExpenses.map(r => r.category)))]
   const allReceivables = [...new Set(monthsData.flatMap(md => md.data.receivables.map(r => r.person)))]
@@ -496,9 +500,9 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
           <TotalRow label="Total ingresos" values={monthsData.map(md => md.data.totalIncome)} color="success" bold />
 
           <GroupHeader label="Gastos fijos" color="danger" colSpan={monthsData.length + 1} />
-          {allFixedExpenses.map(desc => (
-            <DataRow key={desc} label={desc} values={monthsData.map(md =>
-              md.data.fixedExpenses.find(r => r.description === desc)?.amount ?? 0
+          {allFixedExpenseIds.map(id => (
+            <DataRow key={id} label={fixedExpenseMap.get(id)!} values={monthsData.map(md =>
+              md.data.fixedExpenses.find(r => r.id === id)?.amount ?? 0
             )} color="danger" now={now} months={monthsData.map(m => m.month)} />
           ))}
           <TotalRow label="Subtotal" values={monthsData.map(md =>

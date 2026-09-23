@@ -14,7 +14,7 @@ export function CategoryPicker({ type, value, onChange }: CategoryPickerProps) {
 
   return (
     <div className="space-y-1">
-      <label className="block text-sm font-medium text-foreground">Categoria</label>
+      <label className="block text-sm font-medium text-foreground">Categoría</label>
       <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
         {categories.map((cat) => (
           <button
