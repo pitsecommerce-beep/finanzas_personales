@@ -64,13 +64,17 @@ export function getBillingPeriod(cutOffDay: number): { start: Date; end: Date } 
   }
 }
 
+export function parseDateString(date: string): Date {
+  return new Date(date + 'T12:00:00')
+}
+
 export function formatDateEs(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date
+  const d = typeof date === 'string' ? parseDateString(date) : date
   return format(d, "d 'de' MMMM 'de' yyyy", { locale: es })
 }
 
 export function formatShortDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date
+  const d = typeof date === 'string' ? parseDateString(date) : date
   return format(d, 'dd/MM/yyyy')
 }
 
@@ -81,7 +85,7 @@ export function daysUntil(date: Date): number {
 }
 
 export function getRemainingMonths(startDate: string, totalMonths: number): number {
-  const start = new Date(startDate)
+  const start = parseDateString(startDate)
   const now = new Date()
   const monthsElapsed = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth())
   return Math.max(0, totalMonths - monthsElapsed)
@@ -96,7 +100,7 @@ export function getClosedBillingPeriod(cutOffDay: number): { start: Date; end: D
 }
 
 export function isInBillingPeriod(transactionDate: string, cutOffDay: number): boolean {
-  const date = startOfDay(new Date(transactionDate))
+  const date = startOfDay(parseDateString(transactionDate))
   const period = getBillingPeriod(cutOffDay)
   return (isAfter(date, period.start) || date.getTime() === period.start.getTime()) &&
          (isBefore(date, period.end) || date.getTime() === period.end.getTime())

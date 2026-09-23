@@ -342,7 +342,7 @@ export default function CuentasPage() {
               {debt.due_date && (
                 <div className="flex items-center gap-1 mt-1 text-xs text-muted">
                   <CalendarDays size={12} />
-                  <span>{format(new Date(debt.due_date), "d 'de' MMMM yyyy", { locale: es })}</span>
+                  <span>{format(new Date(debt.due_date + 'T12:00:00'), "d 'de' MMMM yyyy", { locale: es })}</span>
                 </div>
               )}
             </div>

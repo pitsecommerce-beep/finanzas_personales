@@ -28,9 +28,9 @@ export default function GastosFijosPage() {
       return sum + (remaining > 0 ? Number(p.monthly_amount) : 0)
     }
     const now = new Date()
-    const start = new Date(p.start_date)
+    const start = new Date(p.start_date + 'T12:00:00')
     if (start > now) return sum
-    if (p.end_date && new Date(p.end_date) < now) return sum
+    if (p.end_date && new Date(p.end_date + 'T12:00:00') < now) return sum
     return sum + Number(p.monthly_amount)
   }, 0)
 
