@@ -26,7 +26,7 @@ const TYPE_LABELS: Record<string, string> = {
 export default function TarjetasPage() {
   const router = useRouter()
   const { accounts, loading, deleteAccount, refetch } = useAccounts()
-  const { balances } = useAccountBalances()
+  const { balances, refetch: refetchBalances } = useAccountBalances()
   const [showForm, setShowForm] = useState(false)
   const [editingCard, setEditingCard] = useState<Account | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -107,12 +107,12 @@ export default function TarjetasPage() {
       )}
 
       <Modal open={showForm} onClose={handleCloseForm} title="Nueva cuenta">
-        <CardForm onSuccess={() => { handleCloseForm(); refetch() }} />
+        <CardForm onSuccess={() => { handleCloseForm(); refetch(); refetchBalances() }} />
       </Modal>
 
       <Modal open={!!editingCard} onClose={handleCloseForm} title="Editar cuenta">
         {editingCard && (
-          <CardForm card={editingCard} onSuccess={() => { handleCloseForm(); refetch() }} />
+          <CardForm card={editingCard} onSuccess={() => { handleCloseForm(); refetch(); refetchBalances() }} />
         )}
       </Modal>
 
