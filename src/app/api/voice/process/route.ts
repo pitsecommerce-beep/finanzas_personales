@@ -91,11 +91,23 @@ const TOOLS = [
   },
   {
     name: 'ask_user',
-    description: 'Pregunta al usuario cuando falta información para completar el registro. Usa esto cuando no tengas datos suficientes.',
+    description: 'Pregunta al usuario cuando falta información. Si la pregunta tiene opciones concretas (por ejemplo elegir entre varias cuentas), incluye un array de options con label y value. Si no hay opciones predefinidas, deja options vacío.',
     input_schema: {
       type: 'object' as const,
       properties: {
         question: { type: 'string' as const, description: 'La pregunta para el usuario' },
+        options: {
+          type: 'array' as const,
+          description: 'Opciones para que el usuario elija. Cada una tiene label (texto visible) y value (valor a enviar). Usa esto siempre que la respuesta sea una de varias opciones conocidas (cuentas, categorías, etc.)',
+          items: {
+            type: 'object' as const,
+            properties: {
+              label: { type: 'string' as const, description: 'Texto visible del botón' },
+              value: { type: 'string' as const, description: 'Valor que se envía al seleccionar' },
+            },
+            required: ['label', 'value'],
+          },
+        },
       },
       required: ['question'],
     },
@@ -275,12 +287,15 @@ El usuario te dicta por voz lo que quiere registrar. Tu trabajo es interpretar s
 REGLAS:
 - Si falta información esencial (monto, descripción), usa ask_user para preguntar
 - Si el usuario menciona una cuenta o tarjeta por nombre, busca el ID en la lista de cuentas
+- Si hay varias cuentas que coincidan con lo que dijo el usuario (por ejemplo "santander" y hay Santander Free y Santander Zero), usa ask_user con options para que elija. Cada option debe tener label con el alias de la cuenta y value con el UUID de la cuenta
+- Siempre que la respuesta sea elegir entre opciones conocidas, usa ask_user con options en lugar de esperar texto libre
 - Si dice "a meses" o "MSI", usa installment_months en add_expense o add_fixed_expense
 - Si dice "me deben" o "le preste a", es cuenta por cobrar (receivable)
 - Si dice "le debo" o "tengo que pagar", es cuenta por pagar (payable)
 - Si dice "gasto fijo" o "pago mensual" o "renta" o "servicio recurrente", usa add_fixed_expense
 - Si dice "me pagan" o "mi sueldo" o "nómina", usa add_income_source para ingresos fijos
 - Responde siempre en español, de forma breve y en texto plano (sin markdown, sin asteriscos, sin negritas)
+- Cuando registres algo exitosamente, solo confirma lo que se registró. No hagas preguntas de seguimiento como "quieres registrar algo más" o "necesitas algo más"
 - La fecha de hoy es ${todayMX()}
 
 CUENTAS DEL USUARIO:
@@ -306,9 +321,12 @@ ${accountsContext || 'No tiene cuentas registradas'}
 
       for (const block of toolUseBlocks) {
         if (block.name === 'ask_user') {
-          const question = (block.input as Record<string, string>).question
+          const input = block.input as Record<string, unknown>
+          const question = input.question as string
+          const options = (input.options as Array<{ label: string; value: string }>) ?? []
           return NextResponse.json({
             question,
+            options,
             conversation: [
               ...messages,
               { role: 'assistant', content: response.content },

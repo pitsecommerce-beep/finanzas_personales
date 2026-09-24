@@ -182,8 +182,8 @@ export default function CardDetailPage() {
       }
 
       for (const ip of statementAnalysis.installment_summary) {
-        const endDate = new Date(ip.start_date + 'T12:00:00')
-        endDate.setMonth(endDate.getMonth() + ip.total_months)
+        const endDate = new Date(statementAnalysis.period_end + 'T12:00:00')
+        endDate.setMonth(endDate.getMonth() + ip.remaining_months)
 
         const { data: plan, error: ipErr } = await supabase
           .from('installment_plans')
