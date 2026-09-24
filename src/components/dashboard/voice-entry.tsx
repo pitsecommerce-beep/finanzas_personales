@@ -296,28 +296,28 @@ export function VoiceEntry() {
           <button
             onClick={cancelEntry}
             className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 text-muted hover:bg-gray-200 transition select-none"
-            style={{ WebkitTouchCallout: 'none' }}
+            style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
           >
-            <X size={18} />
+            <X size={18} className="pointer-events-none" />
           </button>
         )}
         {recording ? (
           <button
             onClick={stopRecording}
             className="relative flex items-center justify-center w-12 h-12 rounded-full bg-danger text-white select-none"
-            style={{ WebkitTouchCallout: 'none' }}
+            style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
           >
-            <span className="absolute inset-0 rounded-full bg-danger/30 animate-ping" />
-            <Square size={20} className="relative" />
+            <span className="absolute inset-0 rounded-full bg-danger/30 animate-ping pointer-events-none" />
+            <Square size={20} className="relative pointer-events-none" />
           </button>
         ) : (
           <button
             onClick={startRecording}
             disabled={processing}
             className="flex items-center justify-center w-12 h-12 rounded-full bg-accent text-white hover:bg-accent/90 transition disabled:opacity-50 select-none"
-            style={{ WebkitTouchCallout: 'none' }}
+            style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
           >
-            {processing ? <Loader2 size={20} className="animate-spin" /> : <Mic size={20} />}
+            {processing ? <Loader2 size={20} className="animate-spin pointer-events-none" /> : <Mic size={20} className="pointer-events-none" />}
           </button>
         )}
       </div>
