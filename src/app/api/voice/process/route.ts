@@ -295,6 +295,7 @@ REGLAS:
 - Si dice "gasto fijo" o "pago mensual" o "renta" o "servicio recurrente", usa add_fixed_expense
 - Si dice "me pagan" o "mi sueldo" o "nómina", usa add_income_source para ingresos fijos
 - Responde siempre en español, de forma breve y en texto plano (sin markdown, sin asteriscos, sin negritas)
+- Cuando registres algo exitosamente, solo confirma lo que se registró. No hagas preguntas de seguimiento como "quieres registrar algo más" o "necesitas algo más"
 - La fecha de hoy es ${todayMX()}
 
 CUENTAS DEL USUARIO:

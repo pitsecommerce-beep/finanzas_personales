@@ -291,12 +291,7 @@ export function VoiceEntry() {
         </div>
       )}
 
-      {transcript && !recording && (
-        <div className="bg-gray-50 rounded-lg px-3 py-2">
-          <p className="text-xs text-muted mb-0.5">Transcripción</p>
-          <p className="text-sm">{transcript}</p>
-        </div>
-      )}
+      {/* Transcripción omitida: el usuario solo necesita ver la confirmación */}
 
       {question && (
         <div className="space-y-2">
