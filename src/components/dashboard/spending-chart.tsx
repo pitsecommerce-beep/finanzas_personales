@@ -74,8 +74,8 @@ export function SpendingChart({ entries }: SpendingChartProps) {
           </ResponsiveContainer>
         </div>
 
-        <div className="flex-1 space-y-2 w-full">
-          {data.slice(0, 6).map((item, i) => (
+        <div className="flex-1 space-y-2 w-full max-h-52 overflow-y-auto">
+          {data.map((item, i) => (
             <div key={item.category} className="flex items-center gap-2 text-sm">
               <div
                 className="w-3 h-3 rounded-full flex-shrink-0"
