@@ -448,7 +448,7 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-gray-50 border-b border-border">
-            <th className="text-left px-4 py-3 font-semibold text-foreground sticky left-0 bg-gray-50 min-w-[200px]">Concepto</th>
+            <th className="text-left px-4 py-3 font-semibold text-foreground sticky left-0 z-10 bg-gray-50 min-w-[160px]">Concepto</th>
             {monthsData.map(md => (
               <th key={md.month.toISOString()} className={`text-right px-4 py-3 font-semibold min-w-[120px] capitalize ${
                 isSameMonth(md.month, now) ? 'text-accent' : 'text-foreground'
@@ -540,7 +540,7 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
           <TotalRow label="Total gastos" values={monthsData.map(md => md.data.totalExpense)} color="danger" bold />
 
           <tr className="border-t-2 border-border bg-gray-50">
-            <td className="px-4 py-3 font-bold sticky left-0 bg-gray-50">Resultado neto</td>
+            <td className="px-4 py-3 font-bold sticky left-0 z-10 bg-gray-50">Resultado neto</td>
             {monthsData.map((md, i) => (
               <td key={i} className={`text-right px-4 py-3 font-bold ${md.data.net >= 0 ? 'text-success' : 'text-danger'}`}>
                 {formatMXN(md.data.net)}
@@ -552,7 +552,7 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
             let cumulative = 0
             return (
               <tr className="border-t border-border bg-accent/5">
-                <td className="px-4 py-3 font-bold sticky left-0 bg-accent/5 text-accent">Flujo de caja</td>
+                <td className="px-4 py-3 font-bold sticky left-0 z-10 bg-accent/5 text-accent">Flujo de caja</td>
                 {monthsData.map((md, i) => {
                   cumulative += md.data.net
                   return (
@@ -572,7 +572,7 @@ function MultiMonthView({ monthsData }: { monthsData: { month: Date; data: Month
                 const account = accountMap[accountId]
                 return (
                   <tr key={accountId} className="border-t border-border">
-                    <td className="px-4 py-2 sticky left-0 bg-white">
+                    <td className="px-4 py-2 sticky left-0 z-10 bg-white">
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: account.color }} />
                         <span className="text-sm truncate">{account.alias}</span>
@@ -603,7 +603,7 @@ function GroupHeader({ label, color, colSpan }: { label: string; color: string; 
   const textMap: Record<string, string> = { success: 'text-success', danger: 'text-danger', accent: 'text-accent' }
   return (
     <tr className={bgMap[color] || 'bg-gray-50'}>
-      <td colSpan={colSpan} className={`px-4 py-2 font-semibold text-xs uppercase tracking-wide ${textMap[color] || ''} sticky left-0 ${bgMap[color] || 'bg-gray-50'}`}>
+      <td colSpan={colSpan} className={`px-4 py-2 font-semibold text-xs uppercase tracking-wide ${textMap[color] || ''} sticky left-0 z-10 ${bgMap[color] || 'bg-gray-50'}`}>
         {label}
       </td>
     </tr>
@@ -616,7 +616,7 @@ function DataRow({ label, values, color, now, months }: {
   const textColor = color === 'success' ? 'text-success' : 'text-danger'
   return (
     <tr className="border-t border-border/50">
-      <td className="px-4 py-2 text-sm sticky left-0 bg-white">{label}</td>
+      <td className="px-4 py-2 text-sm sticky left-0 z-10 bg-white truncate max-w-[160px]">{label}</td>
       {values.map((v, i) => (
         <td key={i} className={`text-right px-4 py-2 text-sm ${v > 0 ? textColor : 'text-muted'} ${
           isSameMonth(months[i], now) ? 'font-medium' : ''
@@ -635,7 +635,7 @@ function TotalRow({ label, values, color, bold }: {
   const bg = bold ? 'bg-gray-50' : ''
   return (
     <tr className={`border-t border-border ${bg}`}>
-      <td className={`px-4 py-2 ${bold ? 'font-bold' : 'font-semibold'} text-sm sticky left-0 ${bg || 'bg-white'}`}>{label}</td>
+      <td className={`px-4 py-2 ${bold ? 'font-bold' : 'font-semibold'} text-sm sticky left-0 z-10 ${bg || 'bg-white'}`}>{label}</td>
       {values.map((v, i) => (
         <td key={i} className={`text-right px-4 py-2 text-sm ${bold ? 'font-bold' : 'font-semibold'} ${textColor}`}>
           {formatMXN(v)}
