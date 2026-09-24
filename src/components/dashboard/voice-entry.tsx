@@ -117,6 +117,7 @@ export function VoiceEntry() {
   const [error, setError] = useState('')
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
+  const [options, setOptions] = useState<Array<{ label: string; value: string }>>([])
   const [conversation, setConversation] = useState<ConversationMessage[] | null>(null)
   const [actions, setActions] = useState<string[]>([])
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null)
@@ -129,6 +130,7 @@ export function VoiceEntry() {
       setError('')
       setResponse('')
       setQuestion('')
+      setOptions([])
       setActions([])
       setConversation(null)
 
@@ -227,12 +229,14 @@ export function VoiceEntry() {
 
       if (data.question) {
         setQuestion(data.question)
+        setOptions(data.options ?? [])
         setConversation(data.conversation)
         setResponse('')
       } else {
         setResponse(data.message)
         setActions(data.actions ?? [])
         setQuestion('')
+        setOptions([])
         setConversation(null)
       }
     } catch {
@@ -241,15 +245,17 @@ export function VoiceEntry() {
     setProcessing(false)
   }
 
-  async function handleAnswer() {
-    if (!answer.trim() || !conversation) return
+  async function handleAnswer(value?: string) {
+    const text = value ?? answer.trim()
+    if (!text || !conversation) return
     const newConv = [
       ...conversation,
-      { role: 'user', content: answer },
+      { role: 'user', content: text },
     ]
     setQuestion('')
     setAnswer('')
-    await sendToProcess(answer, newConv)
+    setOptions([])
+    await sendToProcess(text, newConv)
   }
 
   return (
@@ -297,19 +303,34 @@ export function VoiceEntry() {
           <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
             <p className="text-sm text-blue-800">{question}</p>
           </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAnswer()}
-              placeholder="Escribe tu respuesta..."
-              className="flex-1 px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
-            />
-            <Button onClick={handleAnswer} size="sm" disabled={!answer.trim() || processing}>
-              <Send size={14} />
-            </Button>
-          </div>
+          {options.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {options.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => handleAnswer(opt.value)}
+                  disabled={processing}
+                  className="px-3 py-2 bg-white border border-border rounded-lg text-sm font-medium hover:border-accent hover:text-accent transition disabled:opacity-50"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAnswer()}
+                placeholder="Escribe tu respuesta..."
+                className="flex-1 px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+              />
+              <Button onClick={() => handleAnswer()} size="sm" disabled={!answer.trim() || processing}>
+                <Send size={14} />
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
