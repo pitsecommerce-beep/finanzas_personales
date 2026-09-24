@@ -50,15 +50,15 @@ export function SpendingChart({ entries }: SpendingChartProps) {
     <div className="bg-white rounded-xl border border-border p-4">
       <h3 className="font-semibold text-sm mb-4">Gastos por categoría</h3>
       <div className="flex flex-col sm:flex-row items-center gap-4">
-        <div className="w-48 h-48">
+        <div className="w-44 h-44 flex-shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                innerRadius={50}
-                outerRadius={80}
+                innerRadius={40}
+                outerRadius={70}
                 paddingAngle={2}
                 dataKey="value"
               >
@@ -74,8 +74,8 @@ export function SpendingChart({ entries }: SpendingChartProps) {
           </ResponsiveContainer>
         </div>
 
-        <div className="flex-1 space-y-2 w-full">
-          {data.slice(0, 6).map((item, i) => (
+        <div className="flex-1 space-y-2 w-full max-h-52 overflow-y-auto">
+          {data.map((item, i) => (
             <div key={item.category} className="flex items-center gap-2 text-sm">
               <div
                 className="w-3 h-3 rounded-full flex-shrink-0"
