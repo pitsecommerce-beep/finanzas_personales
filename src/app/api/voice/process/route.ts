@@ -13,7 +13,7 @@ const TOOLS = [
         description: { type: 'string' as const, description: 'Descripción del gasto' },
         category: {
           type: 'string' as const,
-          enum: ['restaurante','transporte','despensa','entretenimiento','salud','educacion','servicios','ropa','hogar','mascotas','viajes','regalos','suscripciones','cafe','gimnasio','otros'],
+          enum: ['restaurante','transporte','despensa','entretenimiento','salud','educacion','servicios','ropa','hogar','mascotas','viajes','regalos','suscripciones','cafe','gimnasio','belleza','otros'],
         },
         account_id: { type: 'string' as const, description: 'UUID de la cuenta. Si no se especifica, queda null.' },
         date: { type: 'string' as const, description: 'Fecha YYYY-MM-DD. Si no se dice, usa hoy.' },
@@ -51,7 +51,7 @@ const TOOLS = [
         total_months: { type: 'number' as const, description: 'Número de meses. 1 para recurrente, 2-48 para MSI.' },
         category: {
           type: 'string' as const,
-          enum: ['restaurante','transporte','despensa','entretenimiento','salud','educacion','servicios','ropa','hogar','mascotas','viajes','regalos','suscripciones','cafe','gimnasio','otros'],
+          enum: ['restaurante','transporte','despensa','entretenimiento','salud','educacion','servicios','ropa','hogar','mascotas','viajes','regalos','suscripciones','cafe','gimnasio','belleza','otros'],
         },
         account_id: { type: 'string' as const, description: 'UUID de la cuenta' },
         start_date: { type: 'string' as const, description: 'Fecha inicio YYYY-MM-DD' },
