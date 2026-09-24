@@ -88,6 +88,7 @@ Reglas:
 - "minimum_payment" es el pago mínimo.
 - Las transacciones con MSI deben tener is_msi=true, msi_months con el total de meses, y msi_monthly_amount con lo que se paga por mes.
 - En installment_summary incluye TODAS las compras a meses sin intereses activas que aparezcan en el estado.
+- IMPORTANTE sobre remaining_months en MSI: cuando el estado de cuenta dice "pago 2 de 3" significa que el pago 2 TODAVIA NO se ha cobrado, se cobrará en la fecha de pago de ESTE periodo. Por lo tanto remaining_months debe ser 2 (faltan el pago 2 y el 3). En general, si dice "pago N de M", remaining_months = M - N + 1.
 - Para category_hint usa uno de estos slugs: supermercado, restaurantes, transporte, entretenimiento, salud, educacion, ropa, hogar, servicios, suscripciones, gasolina, mascotas, viajes, regalos, otros.
 - Los montos siempre positivos.
 - Si no encuentras algún dato, usa null.`
