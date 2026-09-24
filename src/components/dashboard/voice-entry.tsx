@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Mic, Square, Loader2, Send } from 'lucide-react'
+import { Mic, Square, Loader2, Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 type ConversationMessage = {
@@ -258,6 +258,31 @@ export function VoiceEntry() {
     await sendToProcess(text, newConv)
   }
 
+  function cancelEntry() {
+    if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
+      mediaRecorder.current.ondataavailable = null
+      mediaRecorder.current.onstop = null
+      mediaRecorder.current.stop()
+    }
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(t => t.stop())
+    }
+    setRecording(false)
+    setProcessing(false)
+    setTranscript('')
+    setResponse('')
+    setError('')
+    setQuestion('')
+    setAnswer('')
+    setOptions([])
+    setConversation(null)
+    setActions([])
+    setMediaStream(null)
+    chunks.current = []
+  }
+
+  const isActive = recording || processing || !!question || !!response || !!error || actions.length > 0
+
   return (
     <div className="bg-white rounded-xl border border-border p-4 space-y-3">
       <div className="flex items-center justify-between">
@@ -266,6 +291,16 @@ export function VoiceEntry() {
           <p className="text-xs text-muted">Dicta tu gasto, ingreso o registro</p>
         </div>
 
+        <div className="flex items-center gap-2">
+        {isActive && (
+          <button
+            onClick={cancelEntry}
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 text-muted hover:bg-gray-200 transition select-none"
+            style={{ WebkitTouchCallout: 'none' }}
+          >
+            <X size={18} />
+          </button>
+        )}
         {recording ? (
           <button
             onClick={stopRecording}
@@ -285,6 +320,7 @@ export function VoiceEntry() {
             {processing ? <Loader2 size={20} className="animate-spin" /> : <Mic size={20} />}
           </button>
         )}
+      </div>
       </div>
 
       {recording && (
