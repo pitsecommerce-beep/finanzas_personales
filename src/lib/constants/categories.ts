@@ -14,6 +14,7 @@ export const EXPENSE_CATEGORIES = [
   { id: 'suscripciones', label: 'Suscripciones', emoji: '📱' },
   { id: 'cafe', label: 'Café', emoji: '☕' },
   { id: 'gimnasio', label: 'Gimnasio', emoji: '💪' },
+  { id: 'belleza', label: 'Belleza y estilo', emoji: '✨' },
   { id: 'otros', label: 'Otros', emoji: '📦' },
   { id: 'traspaso', label: 'Traspaso', emoji: '🔄' },
   { id: 'pago_credito', label: 'Pago a tarjeta', emoji: '💳' },
