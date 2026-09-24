@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import {
@@ -28,22 +29,22 @@ export default async function LandingPage() {
   const features = [
     {
       icon: CreditCard,
-      title: 'Tarjetas',
+      title: 'Cuentas y tarjetas',
       desc: 'Gestiona crédito, débito, ahorro, efectivo y vales de despensa en un solo lugar.',
     },
     {
       icon: BarChart3,
-      title: 'Dashboard',
-      desc: 'Visualiza gastos por categoría, liquidez disponible y tendencias mensuales.',
+      title: 'Dashboard en tiempo real',
+      desc: 'Visualiza gastos por categoría, liquidez disponible y próximos pagos de un vistazo.',
     },
     {
       icon: MessageCircle,
-      title: 'Asesor IA',
+      title: 'Asesor con IA',
       desc: 'Recibe consejos financieros personalizados basados en tus datos reales.',
     },
     {
       icon: Shield,
-      title: 'Seguro',
+      title: 'Privacidad ante todo',
       desc: 'Tus datos están protegidos con cifrado y políticas de acceso estrictas.',
     },
   ]
@@ -62,22 +63,22 @@ export default async function LandingPage() {
     {
       icon: TrendingUp,
       title: 'Rendimientos',
-      desc: 'Calcula rendimientos de cuentas de ahorro con tasa dual (límite regulatorio de $25,000).',
+      desc: 'Calcula rendimientos de cuentas de ahorro con tasa dual y límite regulatorio.',
     },
     {
       icon: Wallet,
-      title: 'Gastos fijos',
-      desc: 'Controla MSI y suscripciones mensuales con fechas de inicio y fin.',
+      title: 'Gastos fijos y MSI',
+      desc: 'Controla meses sin intereses y suscripciones con fechas de inicio y fin.',
     },
     {
       icon: Bell,
       title: 'Alertas de pago',
-      desc: 'Recibe recordatorios cuando se acercan los pagos de tus tarjetas.',
+      desc: 'Recibe recordatorios cuando se acercan las fechas de pago de tus tarjetas.',
     },
     {
       icon: FileSpreadsheet,
       title: 'Estado de resultados',
-      desc: 'Genera tu P&L por mes, semestre o año y descárgalo en Excel.',
+      desc: 'Genera tu P&L mensual, semestral o anual y descárgalo en Excel.',
     },
   ]
 
@@ -110,8 +111,8 @@ export default async function LandingPage() {
             Toma el control de tus <span className="text-accent">finanzas personales</span>
           </h2>
           <p className="text-lg text-gray-400 mb-8">
-            Registra gastos, administra tus tarjetas, rastrea pagos diferidos y recibe
-            recomendaciones inteligentes con IA.
+            Registra gastos, administra tus tarjetas, rastrea pagos a meses sin intereses
+            y recibe recomendaciones inteligentes con IA.
           </p>
           <Link
             href="/registro"
@@ -134,19 +135,21 @@ export default async function LandingPage() {
         </section>
 
         <section className="py-16">
-          <h2 className="text-2xl font-bold text-center mb-3">¿Qué es Nummo?</h2>
+          <h2 className="text-2xl font-bold text-center mb-3">Tu dinero, en una sola vista</h2>
           <p className="text-center text-gray-400 max-w-xl mx-auto mb-12">
-            Nummo es tu asistente financiero personal. Centraliza tus cuentas, controla tus
-            gastos y toma mejores decisiones con datos claros y un asesor con inteligencia artificial.
+            Nummo centraliza todas tus cuentas, muestra tus gastos por categoría y te ayuda
+            a tomar mejores decisiones con un asesor de inteligencia artificial.
           </p>
 
-          <div className="bg-secondary rounded-2xl border border-white/10 p-8 mb-12">
-            <div className="aspect-video bg-white/5 rounded-xl flex items-center justify-center border border-dashed border-white/20">
-              <div className="text-center text-gray-500">
-                <BarChart3 size={48} className="mx-auto mb-2 opacity-40" />
-                <p className="text-sm">Vista previa del dashboard</p>
-              </div>
-            </div>
+          <div className="bg-secondary rounded-2xl border border-white/10 p-4 sm:p-6 mb-12">
+            <Image
+              src="/screenshots/dashboard.png"
+              alt="Dashboard de Nummo con resumen de ingresos, gastos y liquidez"
+              width={1280}
+              height={800}
+              className="rounded-xl w-full h-auto"
+              priority
+            />
           </div>
         </section>
 
@@ -167,22 +170,52 @@ export default async function LandingPage() {
 
         <section className="py-16">
           <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-secondary rounded-2xl border border-white/10 p-6">
-              <div className="aspect-[4/3] bg-white/5 rounded-xl flex items-center justify-center border border-dashed border-white/20">
-                <div className="text-center text-gray-500">
-                  <CreditCard size={40} className="mx-auto mb-2 opacity-40" />
-                  <p className="text-sm">Vista de tarjetas</p>
-                </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Todas tus cuentas organizadas</h3>
+              <p className="text-sm text-gray-400 mb-4">
+                Crédito, débito, ahorro, efectivo y vales agrupados por tipo, con saldos actualizados al instante.
+              </p>
+              <div className="bg-secondary rounded-2xl border border-white/10 p-4">
+                <Image
+                  src="/screenshots/tarjetas.png"
+                  alt="Vista de cuentas y tarjetas en Nummo"
+                  width={1280}
+                  height={780}
+                  className="rounded-xl w-full h-auto"
+                />
               </div>
             </div>
-            <div className="bg-secondary rounded-2xl border border-white/10 p-6">
-              <div className="aspect-[4/3] bg-white/5 rounded-xl flex items-center justify-center border border-dashed border-white/20">
-                <div className="text-center text-gray-500">
-                  <MessageCircle size={40} className="mx-auto mb-2 opacity-40" />
-                  <p className="text-sm">Asesor inteligente</p>
-                </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Asesor financiero con IA</h3>
+              <p className="text-sm text-gray-400 mb-4">
+                Pregúntale lo que quieras sobre tus finanzas y recibe respuestas basadas en tus datos reales.
+              </p>
+              <div className="bg-secondary rounded-2xl border border-white/10 p-4">
+                <Image
+                  src="/screenshots/asesor.png"
+                  alt="Asesor financiero con inteligencia artificial en Nummo"
+                  width={1280}
+                  height={780}
+                  className="rounded-xl w-full h-auto"
+                />
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="py-16">
+          <h3 className="text-lg font-semibold text-center mb-2">Estado de resultados completo</h3>
+          <p className="text-sm text-gray-400 text-center max-w-lg mx-auto mb-6">
+            Visualiza ingresos, gastos fijos, MSI y flujo de caja proyectado por mes, semestre o año.
+          </p>
+          <div className="bg-secondary rounded-2xl border border-white/10 p-4 sm:p-6">
+            <Image
+              src="/screenshots/pyl.png"
+              alt="Estado de resultados semestral con flujo de caja en Nummo"
+              width={1280}
+              height={700}
+              className="rounded-xl w-full h-auto"
+            />
           </div>
         </section>
 
