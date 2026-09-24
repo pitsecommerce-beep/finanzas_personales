@@ -49,9 +49,13 @@ export default function InicioPage() {
 
       <SummaryCards income={income} expenses={expenses} balances={balances} />
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <SpendingChart entries={entries} />
-        <UpcomingPayments accounts={accounts} />
+      <div className="grid lg:grid-cols-5 gap-6">
+        <div className="lg:col-span-3">
+          <SpendingChart entries={entries} />
+        </div>
+        <div className="lg:col-span-2">
+          <UpcomingPayments accounts={accounts} />
+        </div>
       </div>
 
       <div>

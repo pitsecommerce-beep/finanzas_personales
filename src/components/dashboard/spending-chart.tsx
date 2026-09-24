@@ -49,16 +49,16 @@ export function SpendingChart({ entries }: SpendingChartProps) {
   return (
     <div className="bg-white rounded-xl border border-border p-4">
       <h3 className="font-semibold text-sm mb-4">Gastos por categoría</h3>
-      <div className="flex flex-col sm:flex-row items-center gap-4">
-        <div className="w-44 h-44 flex-shrink-0">
+      <div className="flex flex-col sm:flex-row items-start gap-4">
+        <div className="w-36 h-36 flex-shrink-0 self-center">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                innerRadius={40}
-                outerRadius={70}
+                innerRadius={35}
+                outerRadius={60}
                 paddingAngle={2}
                 dataKey="value"
               >
@@ -74,16 +74,16 @@ export function SpendingChart({ entries }: SpendingChartProps) {
           </ResponsiveContainer>
         </div>
 
-        <div className="flex-1 space-y-2 w-full max-h-52 overflow-y-auto">
+        <div className="flex-1 space-y-2 w-full max-h-52 overflow-y-auto min-w-0">
           {data.map((item, i) => (
             <div key={item.category} className="flex items-center gap-2 text-sm">
               <div
                 className="w-3 h-3 rounded-full flex-shrink-0"
                 style={{ backgroundColor: COLORS[i % COLORS.length] }}
               />
-              <span className="flex-1 truncate">{item.name}</span>
-              <span className="font-medium">{formatMXN(item.value)}</span>
-              <span className="text-xs text-muted w-10 text-right">
+              <span className="flex-1 min-w-0 truncate">{item.name}</span>
+              <span className="font-medium whitespace-nowrap">{formatMXN(item.value)}</span>
+              <span className="text-xs text-muted w-8 text-right flex-shrink-0">
                 {Math.round((item.value / total) * 100)}%
               </span>
             </div>
