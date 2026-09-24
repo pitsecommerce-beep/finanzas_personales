@@ -269,7 +269,8 @@ export function VoiceEntry() {
         {recording ? (
           <button
             onClick={stopRecording}
-            className="relative flex items-center justify-center w-12 h-12 rounded-full bg-danger text-white"
+            className="relative flex items-center justify-center w-12 h-12 rounded-full bg-danger text-white select-none"
+            style={{ WebkitTouchCallout: 'none' }}
           >
             <span className="absolute inset-0 rounded-full bg-danger/30 animate-ping" />
             <Square size={20} className="relative" />
@@ -278,7 +279,8 @@ export function VoiceEntry() {
           <button
             onClick={startRecording}
             disabled={processing}
-            className="flex items-center justify-center w-12 h-12 rounded-full bg-accent text-white hover:bg-accent/90 transition disabled:opacity-50"
+            className="flex items-center justify-center w-12 h-12 rounded-full bg-accent text-white hover:bg-accent/90 transition disabled:opacity-50 select-none"
+            style={{ WebkitTouchCallout: 'none' }}
           >
             {processing ? <Loader2 size={20} className="animate-spin" /> : <Mic size={20} />}
           </button>
