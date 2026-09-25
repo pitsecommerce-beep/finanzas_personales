@@ -4,11 +4,6 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Mic, Square, Loader2, Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-type ConversationMessage = {
-  role: string
-  content: unknown
-}
-
 function getSupportedMimeType(): { mimeType: string; ext: string } {
   if (typeof MediaRecorder === 'undefined') return { mimeType: '', ext: 'webm' }
   const candidates = [
@@ -118,7 +113,6 @@ export function VoiceEntry() {
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
   const [options, setOptions] = useState<Array<{ label: string; value: string }>>([])
-  const [conversation, setConversation] = useState<ConversationMessage[] | null>(null)
   const [actions, setActions] = useState<string[]>([])
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null)
   const mediaRecorder = useRef<MediaRecorder | null>(null)
@@ -132,7 +126,6 @@ export function VoiceEntry() {
       setQuestion('')
       setOptions([])
       setActions([])
-      setConversation(null)
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       setMediaStream(stream)
@@ -199,24 +192,21 @@ export function VoiceEntry() {
       const { text } = await transcribeRes.json()
       setTranscript(text)
 
-      await sendToProcess(text, null)
+      await sendToProcess(text)
     } catch {
       setError('Error de conexión.')
     }
     setProcessing(false)
   }
 
-  async function sendToProcess(text: string, conv: ConversationMessage[] | null) {
+  async function sendToProcess(text: string) {
     setProcessing(true)
     setError('')
     try {
-      const body: Record<string, unknown> = { text }
-      if (conv) body.conversation = conv
-
       const processRes = await fetch('/api/voice/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ text }),
       })
 
       const data = await processRes.json()
@@ -230,14 +220,12 @@ export function VoiceEntry() {
       if (data.question) {
         setQuestion(data.question)
         setOptions(data.options ?? [])
-        setConversation(data.conversation)
         setResponse('')
       } else {
         setResponse(data.message)
         setActions(data.actions ?? [])
         setQuestion('')
         setOptions([])
-        setConversation(null)
       }
     } catch {
       setError('Error de conexión.')
@@ -247,15 +235,13 @@ export function VoiceEntry() {
 
   async function handleAnswer(value?: string) {
     const text = value ?? answer.trim()
-    if (!text || !conversation) return
-    const newConv = [
-      ...conversation,
-      { role: 'user', content: text },
-    ]
+    if (!text) return
+    const newTranscript = transcript + '. ' + text
+    setTranscript(newTranscript)
     setQuestion('')
     setAnswer('')
     setOptions([])
-    await sendToProcess(text, newConv)
+    await sendToProcess(newTranscript)
   }
 
   function cancelEntry() {
@@ -275,7 +261,6 @@ export function VoiceEntry() {
     setQuestion('')
     setAnswer('')
     setOptions([])
-    setConversation(null)
     setActions([])
     setMediaStream(null)
     chunks.current = []
