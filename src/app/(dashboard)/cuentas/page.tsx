@@ -155,10 +155,12 @@ export default function CuentasPage() {
     setDeleteId(null)
   }
 
-  const filtered = debts.filter((d) => {
-    if (filter === 'all') return true
-    return d.type === filter
-  })
+  const filtered = debts
+    .filter((d) => {
+      if (filter === 'all') return true
+      return d.type === filter
+    })
+    .sort((a, b) => Number(a.is_paid) - Number(b.is_paid))
 
   const totalReceivable = debts.filter((d) => d.type === 'receivable' && !d.is_paid).reduce((s, d) => s + Number(d.amount), 0)
   const totalPayable = debts.filter((d) => d.type === 'payable' && !d.is_paid).reduce((s, d) => s + Number(d.amount), 0)
@@ -208,8 +210,12 @@ export default function CuentasPage() {
         </div>
       </div>
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-border p-4 space-y-3">
+      <Modal
+        open={showForm}
+        onClose={() => { setShowForm(false); setEditingDebt(null) }}
+        title={editingDebt ? 'Editar cuenta' : 'Nueva cuenta'}
+      >
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div className="flex gap-2">
             <button
               type="button"
@@ -242,7 +248,7 @@ export default function CuentasPage() {
 
           <input
             type="text"
-            placeholder="Descripción (opcional)"
+            placeholder="Descripcion (opcional)"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
@@ -268,12 +274,9 @@ export default function CuentasPage() {
           </div>
 
           <div className="flex gap-2">
-            <button
-              type="submit"
-              className="bg-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-hover transition"
-            >
+            <Button type="submit" className="flex-1">
               {editingDebt ? 'Guardar cambios' : 'Guardar'}
-            </button>
+            </Button>
             <button
               type="button"
               onClick={() => { setShowForm(false); setEditingDebt(null) }}
@@ -283,7 +286,7 @@ export default function CuentasPage() {
             </button>
           </div>
         </form>
-      )}
+      </Modal>
 
       <div className="flex gap-1 bg-white rounded-lg border border-border p-1">
         {[
